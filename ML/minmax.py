@@ -48,12 +48,12 @@ def plot_minmax_isentrypoint(df: pd.DataFrame, path: str):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv(r'C:\trade_strategy1\data\prices_SBER_HOUR_2023-01-24.csv', index_col=0)
+    df = pd.read_csv(r'/home/alex/BitcoinScalper/data_collecting/tinkoff_data/prices_massive_SBER_4_HOUR_2025-01-08.csv', index_col=0)
     WINDOW_SIZE = 100
 
     df = find_min_max(df=df, window_size=WINDOW_SIZE)
     df = find_entry_points(df=df, window_size=WINDOW_SIZE)
-    fig = plot_minmax_isentrypoint(df=df, path=r'C:\trade_strategy1\Lyskovo\charts\MinMaxEntryPoint.html')
+    fig = plot_minmax_isentrypoint(df=df, path=r'/home/alex/BitcoinScalper/charts/MinMaxEntryPoint.html')
     
     df.to_csv('full_data.csv')
     print(df.head())

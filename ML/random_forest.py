@@ -30,17 +30,23 @@ class RandomForestPredicter(basicInvestClassifier):
                                    self.y_pred_df.reset_index(drop=True)], axis=1)
         return self.model
 
-model = RandomForestPredicter(df=pd.read_csv(r"C:\trade_strategy1\Lyskovo\full_data.csv", index_col=0))
-model.train_test_model(n_estimators=50,
-    criterion='gini',
-    max_depth=5,
-    min_samples_split=15,
-    min_samples_leaf=40,
-    max_features='log2',
-    class_weight={0: 1, 1: 1.1},
-    oob_score=True,
-    random_state=None,
-    model_path=r"C:\trade_strategy1\Lyskovo\models\randomForestEntryPointsModel.pkl")
+def main(df_path:str, model_path:str, chart_path:str):
+    model = RandomForestPredicter(df=pd.read_csv(df_path, index_col=0))
+    model.train_test_model(n_estimators=50,
+        criterion='gini',
+        max_depth=5,
+        min_samples_split=15,
+        min_samples_leaf=40,
+        max_features='log2',
+        class_weight={0: 1, 1: 1.1},
+        oob_score=True,
+        random_state=None,
+        model_path=model_path)
 
-model.visual(path=r'C:\trade_strategy1\Lyskovo\charts\RF_entry_points_visualization.html')
-model.analytycs()
+    model.visual(path=chart_path)
+    model.analytycs()
+
+if __name__ == '__main__':
+    main(df_path=r"/home/alex/BitcoinScalper/dataframes/full_data.csv",
+        model_path=r"/home/alex/BitcoinScalper/ML/models/randomForestEntryPointsModel.pkl",
+        chart_path=r'/home/alex/BitcoinScalper/charts/RF_entry_points_visualization.html')

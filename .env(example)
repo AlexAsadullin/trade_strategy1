@@ -1,0 +1,13 @@
+TINKOFF_TOKEN_SAND=''
+TINKOFF_TOKEN_REAL=''
+
+testacc_id=''
+tg_api_id = 0
+tg_api_hash = ''
+
+phone = ''
+username = ''
+bitscalperasad_token = ''
+
+bybit_api_key = ''
+bybit_api_secret = ''

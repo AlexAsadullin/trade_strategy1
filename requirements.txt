@@ -1,9 +1,12 @@
 python-dotenv
+datetime
 pandas
 numpy
+plotly
 matplotlib
 tinkoff
 tinkoff-investments
-plotly
 scikit-learn
 torch
+threading
+telebot

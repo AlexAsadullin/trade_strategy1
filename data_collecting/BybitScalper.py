@@ -166,11 +166,10 @@ class BybitGlassScalper:
             prev_hour = now_hour
             time.sleep(self.sleeptime_sec)
 
-if __name__ == '__main__':
+def main():
     config = dotenv_values("../.env")
     load_dotenv()
     my_scalper = BybitGlassScalper(chat_id=1145759852,
                                    token=os.getenv('bitscalperasad_token'),
                                    sleeptime_sec=1)
-    #my_scalper.run()
-    my_scalper.compress_dataset()
+    my_scalper.run()

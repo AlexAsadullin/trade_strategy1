@@ -27,18 +27,22 @@ class KNNPredicter(basicInvestClassifier):
         return self.model
 
 
-# Example usage
-model = KNNPredicter(df=pd.read_csv(r"C:\trade_strategy1\Lyskovo\full_data.csv", index_col=0))
+def main(df_path:str, model_path:str, chart_path:str):
+    model = KNNPredicter(df=pd.read_csv(df_path, index_col=0))
+    model.train_test_model(
+        n_neighbors=10,  # Default number of neighbors
+        class_weight={0:1, 1:1},  # Equal weight for all neighbors
+        algorithm='kd_tree',  # Let the algorithm decide the best approach
+        leaf_size=10,  # Default leaf size for tree-based algorithms
+        p=2,  # Euclidean distance (Minkowski with p=2)
+        metric='minkowski',  # Standard metric for KNN
+        model_path=r"C:\trade_strategy1\Lyskovo\models\knnEntryPointsModel.pkl"
+    )
 
-model.train_test_model(
-    n_neighbors=10,  # Default number of neighbors
-    class_weight={0:1, 1:1},  # Equal weight for all neighbors
-    algorithm='kd_tree',  # Let the algorithm decide the best approach
-    leaf_size=10,  # Default leaf size for tree-based algorithms
-    p=2,  # Euclidean distance (Minkowski with p=2)
-    metric='minkowski',  # Standard metric for KNN
-    model_path=r"C:\trade_strategy1\Lyskovo\models\knnEntryPointsModel.pkl"
-)
+    model.visual(path=r'C:\trade_strategy1\Lyskovo\charts\KNN_entry_points_visualization.html').show()
+    model.analytycs()
 
-model.visual(path=r'C:\trade_strategy1\Lyskovo\charts\KNN_entry_points_visualization.html').show()
-model.analytycs()
+if __name__ == '__main__':
+    main(df_path=r"/home/alex/BitcoinScalper/dataframes/full_data.csv",
+        model_path=r"/home/alex/BitcoinScalper/ML/models/knnEntryPointsModel.pkl",
+        chart_path=r'/home/alex/BitcoinScalper/charts/KNN_entry_points_visualization.html')

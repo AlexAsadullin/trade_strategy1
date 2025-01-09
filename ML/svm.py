@@ -26,19 +26,25 @@ class SVMModel(basicInvestClassifier):
                                    self.y_pred_df.reset_index(drop=True)], axis=1)
         print(classification_report(self.y_test, self.y_pred))
         return self.model
+    
+def main(df_path:str, model_path:str, chart_path:str):
+    model = SVMModel(df=pd.read_csv(df_path, index_col=0))
+    model.train_test_model(
+        kernel='rbf',
+        C=1.0,
+        degree=3,
+        gamma='scale',
+        coef0=0.0,
+        class_weight={0: 2, 1: 5},
+        probability=True,
+        random_state=42,
+        model_path=model_path
+    )
 
-model = SVMModel(df=pd.read_csv(r"C:\trade_strategy1\Lyskovo\full_data.csv", index_col=0))
-model.train_test_model(
-    kernel='rbf',
-    C=1.0,
-    degree=3,
-    gamma='scale',
-    coef0=0.0,
-    class_weight={0: 2, 1: 5},
-    probability=True,
-    random_state=42,
-    model_path=r"C:\trade_strategy1\Lyskovo\models\SVMEntryPointsModel.pkl"
-)
+    model.visual(path=chart_path)
+    model.analytycs()
 
-model.visual(path=r'C:\trade_strategy1\Lyskovo\charts\SVM_entry_points_visualization.html')
-model.analytycs()
+if __name__ == '__main__':
+    main(df_path=r"/home/alex/BitcoinScalper/dataframes/full_data.csv",
+        model_path=r"/home/alex/BitcoinScalper/ML/models/SVMEntryPointsModel.pkl",
+        chart_path=r'/home/alex/BitcoinScalper/charts/SVM_entry_points_visualization.html')
