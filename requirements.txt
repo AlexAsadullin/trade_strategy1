@@ -1,0 +1,9 @@
+python-dotenv
+pandas
+numpy
+matplotlib
+tinkoff
+tinkoff-investments
+plotly
+scikit-learn
+torch
