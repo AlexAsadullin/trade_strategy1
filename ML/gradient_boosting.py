@@ -3,7 +3,7 @@ from sklearn.metrics import classification_report
 import pandas as pd
 import joblib
 
-from parents import basicInvestClassifier
+from ml_parents import basicInvestClassifier
 
 class GradientBoostingPredicter(basicInvestClassifier):
     def train_test_model(self, learning_rate, n_estimators, subsample,

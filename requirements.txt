@@ -1,6 +1,7 @@
 python-dotenv
 datetime
 pandas
+pandas-ta
 numpy
 plotly
 matplotlib

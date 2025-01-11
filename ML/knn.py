@@ -2,7 +2,7 @@ import pandas as pd
 import joblib
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report
-from parents import basicInvestClassifier
+from ml_parents import basicInvestClassifier
 
 class KNNPredicter(basicInvestClassifier):
     def train_test_model(self, n_neighbors, class_weight, algorithm, leaf_size, p, metric, model_path: str):

@@ -2,7 +2,7 @@ import pandas as pd
 import joblib
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report
-from parents import basicInvestClassifier
+from ml_parents import basicInvestClassifier
 
 class SVMModel(basicInvestClassifier):
     def train_test_model(self, kernel, C, degree, gamma, coef0, class_weight, probability, random_state, model_path: str):

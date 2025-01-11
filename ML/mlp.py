@@ -2,7 +2,7 @@ import pandas as pd
 import joblib
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import classification_report
-from parents import basicInvestClassifier
+from ml_parents import basicInvestClassifier
 
 class MLPModel(basicInvestClassifier):
     def train_test_model(self, hidden_layer_sizes, activation, solver,

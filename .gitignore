@@ -7,5 +7,5 @@ dataframes
 data_collecting/tinkoff_data
 data_collecting/deals_history
 data_collecting/reports_data
-ML/charts
+charts
 ML/models

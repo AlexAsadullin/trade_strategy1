@@ -2,7 +2,7 @@ import pandas as pd
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
-from parents import basicInvestClassifier
+from ml_parents import basicInvestClassifier
 
 class RandomForestPredicter(basicInvestClassifier):
     def train_test_model(self, n_estimators, criterion,
