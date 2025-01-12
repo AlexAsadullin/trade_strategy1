@@ -2,12 +2,12 @@ from strategy_tester_parent import *
 import pandas_ta as ta
 
 class RsiTester(BasicTester):
-    def delta_rsi_test(self, rsi_delta_long, rsi_delta_short, rsi_len: int, delta_len: int):
+    def delta_rsi_test(self, rsi_delta_long, rsi_delta_short, delta_len: int):
         self.now_deal_opened = False
         self.deals_history = {'Long': [], 'Short': []}
         self.deal_len_counter = 0
         rsi_queue, volume_queue, close_queue = [], [], []
-        self.prices_df['RSI'] = ta.RSI(real=self.prices_df['Close'], timeperiod=rsi_len) 
+
         for i, row in self.prices_df.iloc[:delta_len].iterrows():
             rsi_queue.append(row['RSI'])
             volume_queue.append(row['Volume'])
@@ -44,28 +44,26 @@ class RsiTester(BasicTester):
         self.current_deal.forced_close()
         
         # TODO: покупаем не 1 шт акций а больше - в зависимости от "уверенности"
+if __name__ == '__main__':
+    df = pd.read_csv('/home/alex/BitcoinScalper/dataframes/RSI_test.csv', index_col=0)
+    df = df.dropna()
+    print(df.head())
 
-df = pd.read_csv('data/prices_SBER_HOUR_2023-01-24.csv', index_col=0)
-df = df.dropna()
-print(df.head())
+    tester = RsiTester(prices_df=df, min_deal_len=3, max_deal_len=3000, start_deposit=1000,
+                    long_condition=0, short_condition=0,
+                    long_stop_loss_coef=0.8, long_take_profit_coef=1.5,
+                    short_stop_loss_coef=1.2, short_take_profit_coef=0.5)
 
-tester = RsiTester(prices_df=df, min_deal_len=3, max_deal_len=3000, start_deposit=1000,
-                   long_condition=0, short_condition=0,
-                   long_stop_loss_coef=0.8, long_take_profit_coef=1.5,
-                   short_stop_loss_coef=1.2, short_take_profit_coef=0.5)
-
-df['RSI'] = ta.RSI(real=df['Close'], timeperiod=60)
-
-print(tester.prices_df[tester.prices_df['RSI'] > 45])
-df = tester.prices_df
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=df.index, y=df['Close'],
-                                 mode='lines', name='Close',
-                                 line=dict(color='blue')))
-fig.add_trace(go.Scatter(x=df.index, y=df['RSI'],
-                                 mode='lines', name='Close',
-                                 line=dict(color='blue')))
-tester.rsi_classic_test(rsi_long=35, rsi_short=80, rsi_len=38)
-print(tester.pos_neg_analysys())
-#fig.show()
-#tester.delta_hilbert_test(hilbert_delta_long=-66, hilbert_delta_short=66, delta_len=12)
+    df = tester.prices_df
+    tester.delta_rsi_test(rsi_delta_long=30, rsi_delta_short=35, delta_len=18)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df.index, y=df['Close'],
+                                    mode='lines', name='Close',
+                                    line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=df.index, y=df['RSI'],
+                                    mode='lines', name='Close',
+                                    line=dict(color='blue')))
+    
+    print(tester.pos_neg_analysys())
+    #fig.show()
+    #tester.delta_hilbert_test(hilbert_delta_long=-66, hilbert_delta_short=66, delta_len=12)
