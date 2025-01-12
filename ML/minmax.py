@@ -30,7 +30,7 @@ def find_entry_points(df: pd.DataFrame, window_size=10):
     df['IsEntryPoint'] = (condition1 & condition2 & condition3).astype(int)
     return df
 
-def plot_minmax_isentrypoint(df: pd.DataFrame, path: str):
+def plot_minmax_isentrypoint(df: pd.DataFrame, chart_path: str):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Close"], mode='lines',
@@ -43,7 +43,7 @@ def plot_minmax_isentrypoint(df: pd.DataFrame, path: str):
         x=df.index, y=df["Max"], mode='lines', marker=dict(color='green', size=0.8), name='Max Points'))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Min"], mode='lines', marker=dict(color='red', size=0.8), name='Min Points'))
-    fig.write_html(path)
+    fig.write_html(chart_path)
     return fig
 
 
@@ -53,8 +53,8 @@ if __name__ == '__main__':
 
     df = find_min_max(df=df, window_size=WINDOW_SIZE)
     df = find_entry_points(df=df, window_size=WINDOW_SIZE)
-    fig = plot_minmax_isentrypoint(df=df, path=r'/home/alex/BitcoinScalper/charts/MinMaxEntryPoint.html')
+    fig = plot_minmax_isentrypoint(df=df, chart_path=r'/home/alex/BitcoinScalper/charts/MinMaxEntryPoint.html')
     
-    df.to_csv('full_data.csv')
+    df.to_csv(r'/home/alex/BitcoinScalper/dataframes/full_data.csv')
     print(df.head())
     print(len(df[df['IsEntryPoint'] == 0]), len(df))

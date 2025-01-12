@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def find_minmaxes(df: pd.DataFrame, n_range=100, ticker='unknown', visualise=False):
+def find_minmaxes(df: pd.DataFrame, chart_path:str, n_range=100, ticker='unknown', visualise=False):
     from scipy.signal import argrelextrema
     df['Max'] = df.iloc[argrelextrema(df['Close'].values, np.greater_equal,
                                       order=n_range)[0]]['Close']
@@ -26,11 +26,11 @@ def find_minmaxes(df: pd.DataFrame, n_range=100, ticker='unknown', visualise=Fal
         fig.update_layout(title="Mins & Maxs",
                           xaxis_title="time", yaxis_title=f"{ticker} price",
                           showlegend=True)
-        fig.write_html(f"charts\\MinMaxes_{ticker}.html")
+        fig.write_html(chart_path)
     return df
 
 
-def calculate_rsi(df: pd.DataFrame, period: int, ticker='unknown', visualise=False):
+def calculate_rsi(df: pd.DataFrame, chart_path:str, period: int, ticker='unknown', visualise=False):
     df['RSI'] = ta.rsi(df['Close'])
 
     if visualise:
@@ -53,42 +53,10 @@ def calculate_rsi(df: pd.DataFrame, period: int, ticker='unknown', visualise=Fal
                           xaxis_title="time", yaxis_title="Цена",
                           yaxis2_title="RSI", showlegend=True,
                           height=600)
-        fig.write_html(f"charts\\RSI_{ticker}.html")
+        fig.write_html(chart_path)
     return df
 
-
-def alligator_teeth(df, len_short=3, len_mid=5, len_long=8, ticker='unknown', visualise=False):
-    df["AlligatorShort"] = ta.sma(df.Close, length=len_short).shift(3)  # 3
-    df["AlligatorMid"] = ta.sma(df.Close, length=len_mid).shift(5)  # 5
-    df["AlligatorLong"] = ta.sma(df.Close, length=len_long).shift(8)  # 8
-    df["AlligatorSmaDiff"] = df["AlligatorShort"] - df["AlligatorLong"]
-    if visualise:
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
-        fig.add_trace(go.Scatter(x=df.index, y=df['Close'],
-                                 mode='lines', name='Close',
-                                 line=dict(color='blue')
-                                 ), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df.index, y=df['AlligatorShort'],
-                                 mode='lines', name='AlligatorShort',
-                                 line=dict(color='green')), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df.index, y=df['AlligatorMid'],
-                                 mode='lines', name='AlligatorMid',
-                                 line=dict(color='yellow')), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df.index, y=df['AlligatorLong'],
-                                 mode='lines', name='AlligatorLong',
-                                 line=dict(color='red')), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df.index, y=df['AlligatorSmaDiff'],
-                                 mode='lines', name='AlligatorSmaDiff',
-                                 line=dict(color='red')), row=2, col=1)
-        fig.update_layout(title="Цена и Alligator",
-                          xaxis_title="time", yaxis_title="Цена",
-                          yaxis2_title="AlligatorSmaDiff", showlegend=True,
-                          height=600)
-        fig.write_html(f"charts\\Alligator_{ticker}.html")
-    return df
-
-
-def calculate_ema(df: pd.DataFrame, ticker='unknown', length=200, visualise=False):
+def calculate_ema(df: pd.DataFrame, chart_path:str, ticker='unknown', length=200, visualise=False):
     df[f"EMA{length}"] = ta.ema(df.Close, length=length)
 
     if visualise:
@@ -99,7 +67,7 @@ def calculate_ema(df: pd.DataFrame, ticker='unknown', length=200, visualise=Fals
         fig.add_trace(go.Scatter(x=df.index, y=df[f"EMA{length}"],
                                  mode='lines', name=f"EMA{length}",
                                  marker=dict(color='red', size=8)))
-        fig.write_html(f"charts\\EMA_{ticker}_{length}.html")
+        fig.write_html(chart_path)
     return df
 
 
@@ -117,7 +85,7 @@ def main(ticker):
     df = pd.read_csv(f'{NAME}', index_col=0)
     df = find_minmaxes(df=df, ticker='', visualise=True, n_range=1500)
     #del df['Unnamed: 0']
-    df.to_csv(f'minmaxes_mass.csv')
+    df.to_csv(r'/home/alex/BitcoinScalper/dataframes/minmaxes_mass.csv')
 
 
 def find_entry_exit_waves(df: pd.DataFrame):

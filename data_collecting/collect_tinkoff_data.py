@@ -65,7 +65,7 @@ def get_all_figi():
                     'Name': item.name,
                 })
         df = pd.DataFrame(l)
-        df.to_csv('/home/alex/BitcoinScalper/data_collecting/tinkoff_data/tickers_figi.csv')
+        df.to_csv(r'/home/alex/BitcoinScalper/data_collecting/tinkoff_data/tickers_figi.csv')
         print('data is saved')
         return df
 

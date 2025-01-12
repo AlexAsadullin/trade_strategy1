@@ -109,11 +109,11 @@ def calculate_metrics(df, n):
     df = df[df.columns[::-1]]
     return df
 
-if __name__ == '__main__':
-    data = pd.read_csv('/home/alex/BitcoinScalper/dataframes/bullish_trend.csv', index_col=0)
+def main(data_path, model_save_path, chart_path):
+    data = pd.read_csv(data_path, index_col=0)
     df = dc(data)
     df = calculate_metrics(df, 15)
-    df.to_csv('/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv')
+    #df.to_csv('/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv')
     lookback = 7
     
     X_train, X_test, y_train, y_test = normalize_split_data(df, 0.8)
@@ -144,8 +144,8 @@ if __name__ == '__main__':
 
     for epoch in range(num_epochs):
         model, optimizer, loss_function = model.train_validate_one_epoch(model, optimizer, loss_function, epoch)
-    torch.save(model.state_dict(), 'ML/models/lstm_model_state.pth')
-    torch.save(model, 'ML/models/lstm_model_pure.pth')
+    torch.save(model.state_dict(), model_save_path)
+    #torch.save(model, 'ML/models/lstm_model_pure.pth')
     model_scripted = torch.jit.script(model)  # Export to TorchScript
     model_scripted.save('lstm_model_ts.pt')
 
@@ -169,4 +169,9 @@ if __name__ == '__main__':
         marker=dict(size=5, color='red'),  # Use color for easy distinguishing, adjusted marker size.
         name='Predicted'  # Added name
     ))
-    fig.write_html('diff.html')
+    fig.write_html(chart_path)
+
+if __name__ == '__main__':
+    main(data_path=r'/home/alex/BitcoinScalper/dataframes/bullish_trend.csv',
+         model_save_path=r'/home/alex/BitcoinScalper/ML/models/lstm_model_state.pth',
+         chart_path=r'/homw/alex/BitcoinScalper/charts/lstm_predict.html')

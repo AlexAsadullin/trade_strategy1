@@ -30,7 +30,7 @@ df = df.drop(['symbol'], axis=1)
 df = df.drop(['time'], axis=1)
 
 df = aggregate_trades(df)
-df.to_csv('aggregated_deals.csv')
+df.to_csv(r'/home/alex/BitcoinScalper/dataframes/aggregated_deals.csv')
 
 df = n_prev_ratio(df, 15)
 df['next_ratio'] = df['price'].shift(-1) / df['price']

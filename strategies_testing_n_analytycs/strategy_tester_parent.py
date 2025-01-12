@@ -197,7 +197,7 @@ class BasicTester:
         print(f'absolute profit: {total['Long']['abs_profit'] + total['Short']['abs_profit']}')
         return total
 
-    def derivative(self, target_col_name: str = 'Close'):
+    def derivative(self, chart_path: str, target_col_name: str = 'Close'):
         der =  np.gradient(self.prices_df[target_col_name])
         derivative = pd.DataFrame({'Derivative': der}, index=self.prices_df.index)
         
@@ -208,7 +208,7 @@ class BasicTester:
         fig.add_trace(go.Scatter(x=self.prices_df.index, y=derivative['Derivative'],
                                 mode='lines', name='Derivative',
                                 line=dict(color='red')))
-        fig.write_html('derivative.html')
+        fig.write_html(chart_path)
         return derivative
 
 class BybitGlassMonitor:
