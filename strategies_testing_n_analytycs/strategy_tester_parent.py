@@ -111,14 +111,15 @@ class BasicTester:
         if 'long' in deal_name:
             takeprofit_condition = row['Close'] >= deal.entry_price * self.long_take_profit_coef
             stoploss_condition = row['Close'] <= deal.entry_price * self.long_stop_loss_coef
-        else:
+        elif 'short' in deal_name:
             takeprofit_condition = row['Close'] <= deal.entry_price * self.short_take_profit_coef
             stoploss_condition = row['Close'] >= deal.entry_price * self.long_stop_loss_coef
+        else: print('undefined deal')
         if takeprofit_condition:
             deal = self._close_any_deal(deal=deal, exit_trigger='TakeProfit', price=row['Close'], i=index)
             if 'short' in deal_name:
                 self.deals_history['Short'].append(deal)
-            else:
+            elif 'long' in deal_name:
                 self.deals_history['Long'].append(deal)
             
             print('close take profit, profit:', deal.profit, 'len:', self.deal_len_counter)
@@ -128,21 +129,21 @@ class BasicTester:
             deal = self._close_any_deal(deal=deal, exit_trigger='StopLoss', price=row['Close'], i=index)
             if 'short' in deal_name:
                 self.deals_history['Short'].append(deal)
-            else:
+            elif 'long' in deal_name:
                 self.deals_history['Long'].append(deal)
             print('close stop loss, profit:', deal.profit, 'len:', self.deal_len_counter, 'index:', index)
         elif length_condition_soft and deal.count_profit(current_price=row['Close']) > 0:
             deal = self._close_any_deal(deal=deal, exit_trigger='TimeSoft', price=row['Close'], i=index)
             if 'short' in deal_name:
                 self.deals_history['Short'].append(deal)
-            else:
+            elif 'long' in deal_name:
                 self.deals_history['Long'].append(deal)
             print('close by length, wait till profit:', deal.profit, 'len:', self.deal_len_counter, 'index:', index)
         elif length_condition_hard:
             deal = self._close_any_deal(deal=deal, exit_trigger='TimeHard', price=row['Close'], i=index)
             if 'short' in deal_name:
                 self.deals_history['Short'].append(deal)
-            else:
+            elif 'long' in deal_name:
                 self.deals_history['Long'].append(deal)
             print('close by length, hard cond. profit:', deal.profit, 'len:', self.deal_len_counter, 'index:', index)
         else:

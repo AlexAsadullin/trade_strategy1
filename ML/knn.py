@@ -39,10 +39,10 @@ def main(df_path:str, model_path:str, chart_path:str):
         model_path=r"C:\trade_strategy1\Lyskovo\models\knnEntryPointsModel.pkl"
     )
 
-    model.visual(path=r'C:\trade_strategy1\Lyskovo\charts\KNN_entry_points_visualization.html').show()
+    model.visual(path=r'home/alex/BitcoinScalper/html_charts/KNN_entry_points_visualization.html').show()
     model.analytycs()
 
 if __name__ == '__main__':
     main(df_path=r"/home/alex/BitcoinScalper/dataframes/full_data.csv",
         model_path=r"/home/alex/BitcoinScalper/ML/models/knnEntryPointsModel.pkl",
-        chart_path=r'/home/alex/BitcoinScalper/charts/KNN_entry_points_visualization.html')
+        chart_path=r'/home/alex/BitcoinScalper/html_charts/KNN_entry_points_visualization.html')

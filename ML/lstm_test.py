@@ -52,4 +52,4 @@ def train_lstm(data_path, model_read_path, chart_path):
 if __name__ == '__main__':
     train_lstm(data_path=r'/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv',
                model_read_path=r'/home/alex/BitcoinScalper/ML/models/lstm_model_state.pth',
-               chart_path=r'/homw/alex/BitcoinScalper/charts/lstm_predict.html')
+               chart_path=r'/homw/alex/BitcoinScalper/html_charts/lstm_predict.html')

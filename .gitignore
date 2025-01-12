@@ -1,4 +1,3 @@
-charts/
 __pycache__
 .handler-saves
 .idea
@@ -8,6 +7,6 @@ dataframes/
 data_collecting/tinkoff_data/
 data_collecting/deals_history/
 data_collecting/reports_data/
-
-
+data_collecting/training_data/
+html_charts/
 ML/models/

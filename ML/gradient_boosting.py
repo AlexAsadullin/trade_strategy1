@@ -51,4 +51,4 @@ def main(df_path:str, model_path:str, chart_path:str):
 if __name__ == '__main__':
     main(df_path=r"/home/alex/BitcoinScalper/dataframes/full_data.csv",
         model_path=r"/home/alex/BitcoinScalper/ML/models/gradientBoostingEntryPointsModel.pkl",
-        chart_path=r'/home/alex/BitcoinScalper/charts/GB_entry_points_visualization.html')
+        chart_path=r'/home/alex/BitcoinScalper/html_charts/GB_entry_points_visualization.html')

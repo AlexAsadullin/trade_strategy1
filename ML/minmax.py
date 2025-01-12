@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     df = find_min_max(df=df, window_size=WINDOW_SIZE)
     df = find_entry_points(df=df, window_size=WINDOW_SIZE)
-    fig = plot_minmax_isentrypoint(df=df, chart_path=r'/home/alex/BitcoinScalper/charts/MinMaxEntryPoint.html')
+    fig = plot_minmax_isentrypoint(df=df, chart_path=r'/home/alex/BitcoinScalper/html_charts/MinMaxEntryPoint.html')
     
     df.to_csv(r'/home/alex/BitcoinScalper/dataframes/full_data.csv')
     print(df.head())

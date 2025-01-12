@@ -32,7 +32,7 @@ def glass_plot(data: dict, key):
         data=go.Bar(
             x=x_data,
             y=y_data,))
-    filepath = f"/home/alex/BitcoinScalper/charts/telegram/{data['s']}_{data['ts']}_{key}.html"
+    filepath = f"/home/alex/BitcoinScalper/html_charts/telegram/{data['s']}_{data['ts']}_{key}.html"
     figure.update_layout(
         title=f"Amount vs Price, key='{key}'",
         xaxis_title="Price (USDT)",
