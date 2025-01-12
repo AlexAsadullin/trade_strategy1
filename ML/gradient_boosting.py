@@ -52,4 +52,3 @@ if __name__ == '__main__':
     main(df_path=r"/home/alex/BitcoinScalper/dataframes/full_data.csv",
         model_path=r"/home/alex/BitcoinScalper/ML/models/gradientBoostingEntryPointsModel.pkl",
         chart_path=r'/home/alex/BitcoinScalper/charts/GB_entry_points_visualization.html')
-    #hello
