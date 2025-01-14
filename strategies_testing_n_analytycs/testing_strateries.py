@@ -55,7 +55,7 @@ if __name__ == '__main__':
                     short_stop_loss_coef=1.3, short_take_profit_coef=0.7)
 
     df = tester.prices_df
-    tester.delta_rsi_test(rsi_delta_long=30, rsi_delta_short=35, delta_len=3)
+    tester.delta_rsi_test(rsi_delta_long=30, rsi_delta_short=45, delta_len=10)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['Close'],
                                     mode='lines', name='Close',

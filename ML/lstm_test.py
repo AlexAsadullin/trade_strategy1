@@ -4,7 +4,7 @@ from copy import deepcopy as dc
 import plotly.graph_objects as go
 import torch
 
-def train_lstm(data_path, model_read_path, chart_path):
+def test_lstm(data_path, model_read_path, chart_path):
     device = 'cpu'
     data = pd.read_csv(data_path, index_col=0)
     df = dc(data)
@@ -50,6 +50,6 @@ def train_lstm(data_path, model_read_path, chart_path):
     fig.write_html(chart_path)
 
 if __name__ == '__main__':
-    train_lstm(data_path=r'/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv',
+    test_lstm(data_path=r'/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv',
                model_read_path=r'/home/alex/BitcoinScalper/ML/models/lstm_model_state.pth',
                chart_path=r'/homw/alex/BitcoinScalper/html_charts/lstm_predict.html')

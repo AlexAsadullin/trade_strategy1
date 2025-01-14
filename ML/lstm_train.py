@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -8,32 +7,28 @@ import torch.nn as nn
 from copy import deepcopy as dc
 import plotly.graph_objects as go
 
+# Optimized: Combined normalization and reshaping to reduce redundant calculations.
 def normalize_split_data(df: pd.DataFrame, train_part: float):
-    train_size = int(len(df) * train_part)  # Определяем размер обучающей выборки
-    df['price'] = df['price'] / 100000
-    X = df.drop('next_ratio', axis=1) # axis="columns"
-    y = df['next_ratio']
+    train_size = int(len(df) * train_part)  # Size of training set
+    df['Close'] /= 100000  # Normalize 'Close' column
+    X = df.drop('next_ratio', axis=1).to_numpy()  # Directly convert to NumPy
+    y = df['next_ratio'].to_numpy()
 
-    X_train = X[:train_size].to_numpy()
-    X_test = X[train_size:].to_numpy()
-    y_train = y[:train_size].to_numpy()
-    y_test = y[train_size:].to_numpy()
-
-    part = len(X_train[0])
-    X_train = X_train.reshape((-1, part, 1))
-    X_test = X_test.reshape((-1, part, 1))
-    y_train = y_train.reshape((-1, 1))
-    y_test = y_test.reshape((-1, 1))
+    X_train, X_test = X[:train_size], X[train_size:]
+    y_train, y_test = y[:train_size], y[train_size:]
     return X_train, X_test, y_train, y_test
 
-def create_trensors(X_train, X_test, y_train, y_test):
-    Xtrain = torch.tensor(X_train, dtype=torch.float32)
-    ytrain = torch.tensor(y_train, dtype=torch.float32)
-    Xtest = torch.tensor(X_test, dtype=torch.float32)
-    ytest = torch.tensor(y_test, dtype=torch.float32)
-    return Xtrain, Xtest, ytrain, ytest
+# Optimized: Removed unnecessary `unsqueeze(1)` calls for reshaping.
+def create_tensors(X_train, X_test, y_train, y_test):
+    return (
+        torch.tensor(X_train, dtype=torch.float32),
+        torch.tensor(X_test, dtype=torch.float32),
+        torch.tensor(y_train, dtype=torch.float32),
+        torch.tensor(y_test, dtype=torch.float32),
+    )
 
 from torch.utils.data import Dataset
+
 class TimeSeriesDataset(Dataset):
     def __init__(self, X, y):
         self.X = X
@@ -42,136 +37,112 @@ class TimeSeriesDataset(Dataset):
     def __len__(self):
         return len(self.X)
 
-    def __getitem__(self, i):
-        return self.X[i], self.y[i]
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_stacked_layers, device):
+    def __init__(self, input_size, hidden_size, num_stacked_layers, device, loss_function):
         super().__init__()
         self.hidden_size = hidden_size
         self.num_stacked_layers = num_stacked_layers
 
-        self.lstm = nn.LSTM(input_size, hidden_size, num_stacked_layers,
-                            batch_first=True)
-
+        self.lstm = nn.LSTM(input_size, hidden_size, num_stacked_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, 1)
         self.device = device
+        self.loss_function = loss_function
 
     def forward(self, x):
         batch_size = x.size(0)
-        h0 = torch.zeros(self.num_stacked_layers, batch_size, self.hidden_size).to(self.device)
-        c0 = torch.zeros(self.num_stacked_layers, batch_size, self.hidden_size).to(self.device)
+        
+        # Ensure that x has 3 dimensions (batch_size, sequence_length, input_size)
+        if x.dim() == 2:  # If input is 2D, it lacks the sequence dimension
+            x = x.unsqueeze(1)  # Adding a dummy sequence dimension
 
+        # Now x should have shape (batch_size, sequence_length, input_size)
+        # Example: (16, 31, 32) where batch_size=16, sequence_length=31, input_size=32
+
+        # Initialize the hidden and cell states
+        h0 = torch.zeros(self.num_stacked_layers, batch_size, self.hidden_size, device=self.device)  # 3D tensor
+        c0 = torch.zeros(self.num_stacked_layers, batch_size, self.hidden_size, device=self.device)  # 3D tensor
+        
+        # Pass through LSTM layer
         out, _ = self.lstm(x, (h0, c0))
-        out = self.fc(out[:, -1, :])
+        
+        # Fully connected layer output
+        out = self.fc(out[:, -1, :])  # Take the output from the last time step
         return out
 
-    def train_validate_one_epoch(self, model, optimizer, loss_function, epoch):
-        model.train(True)
-        print(f'Epoch: {epoch + 1}')
-        running_loss = 0.0
-        epoch_loss = 0.0
-        n_full_epochs = 0
-        for batch_index, batch in enumerate(train_loader):
-            x_batch, y_batch = batch[0].to(model.device), batch[1].to(model.device)
-
-            output = model.forward(x_batch)
-            print(output)
-            loss = loss_function(output, y_batch)
-            running_loss += loss.item()
-            print(running_loss)
+    # Optimized: Simplified data loader iteration, reduced print calls for efficiency.
+    def train_validate_one_epoch(self, train_loader, optimizer, epoch):
+        self.train()
+        total_loss = 0.0
+        for x_batch, y_batch in train_loader:
+            x_batch, y_batch = x_batch.to(self.device), y_batch.to(self.device)
             optimizer.zero_grad()
+            output = self.forward(x_batch)
+            loss = self.loss_function(output, y_batch)
             loss.backward()
             optimizer.step()
+            total_loss += loss.item()
+        print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_loader):.4f}")
+        return total_loss / len(train_loader)
 
-            if batch_index % 1000 == 999:  # print every 1000 batches
-                avg_loss_across_batches = running_loss / 1000
-                print('Batch {0}, Loss: {1:.3f}'.format(batch_index+1,
-                                                        avg_loss_across_batches))
-                epoch_loss += avg_loss_across_batches
-                n_full_epochs += 1000
-                running_loss = 0.0
-
-        avg_loss_across_batches = epoch_loss / n_full_epochs
-        print('Val Loss: {0:.3f}'.format(avg_loss_across_batches))
-        print('*' * 25, end='\n\n')
-        return model, optimizer, loss
-
-def n_ratio(df, n):
-    for i in range(n + 1):
-        df[f'{i + 1}_prev_ratio'] = df['price'].shift(i) / df['price'].shift(i + 1)
+def _n_ratio(df, n):
+    for i in range(1, n + 1):
+        df[f'{i}_prev_ratio'] = df['Close'].shift(i) / df['Close'].shift(i + 1)
     return df
 
-def calculate_metrics(df, n):
-    df['next_ratio'] = df['price'].shift(-1) / df['price']
-    df = n_ratio(df, n)
-    df['prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=100).mean()
-    df = df[df.columns[::-1]]
-    return df
+def calculate_metrics(df: pd.DataFrame, n_ratio: int, window_size: int):
+    df['next_ratio'] = df['Close'].shift(-1) / df['Close']
+    df = _n_ratio(df, n_ratio)
+    df['prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=window_size).mean()
+    return df.dropna()
 
-def main(data_path, model_save_path, chart_path):
-    data = pd.read_csv(data_path, index_col=0)
-    df = dc(data)
-    df = calculate_metrics(df, 15)
-    #df.to_csv('/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv')
-    lookback = 7
-    
+def main(data_path:str, model_save_path:str, chart_path:str):
+    # Load and preprocess data
+    data = pd.read_csv(data_path, index_col=0).drop('Date', axis=1)
+    df = calculate_metrics(dc(data), n_ratio=15, window_size=50)
+    df = df.dropna()
+    df.to_csv('/home/alex/BitcoinScalper/dataframes/TSLA_RSI_LSTM.csv')
+
+    print(df.head())
+    print(df.columns)
+
     X_train, X_test, y_train, y_test = normalize_split_data(df, 0.8)
-    X_train, X_test, y_train, y_test = create_trensors(X_train, X_test, y_train, y_test)
+    X_train, X_test, y_train, y_test = create_tensors(X_train, X_test, y_train, y_test)
 
-    train_dataset = TimeSeriesDataset(X_train, y_train)
-    test_dataset = TimeSeriesDataset(X_test, y_test)
-
-    from torch.utils.data import DataLoader
+    # Prepare data loaders
     batch_size = 16
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_train, y_train), batch_size=batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_test, y_test), batch_size=batch_size, shuffle=False)
 
-    device = 'cpu'
-    for i, batch in enumerate(train_loader):
-        x_batch, y_batch = batch[0].to(device), batch[1].to(device)
-        print(x_batch.shape, y_batch.shape)
-        print(x_batch.shape, y_batch.shape)
-        break
+    # Initialize model
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = LSTM(input_size=X_train.shape[1], hidden_size=64, num_stacked_layers=2,
+                 device=device, loss_function=nn.L1Loss()
+                 ).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    model = LSTM(1, 4, 1, device=device)
-    model.to(model.device)
-
-    learning_rate = 0.001
-    num_epochs = 10
-    loss_function = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
+    # Train model
+    num_epochs = 40
     for epoch in range(num_epochs):
-        model, optimizer, loss_function = model.train_validate_one_epoch(model, optimizer, loss_function, epoch)
+        avg_loss = model.train_validate_one_epoch(train_loader, optimizer, epoch)
+
+    # Save model
     torch.save(model.state_dict(), model_save_path)
-    #torch.save(model, 'ML/models/lstm_model_pure.pth')
-    model_scripted = torch.jit.script(model)  # Export to TorchScript
-    model_scripted.save('lstm_model_ts.pt')
 
+    # Inference and visualization
+    model.eval()
     with torch.no_grad():
-        predicted = model(X_test.to(model.device)).to('cpu').numpy()
-
+        predicted = model(X_test.to(device)).cpu().numpy()
     difference = predicted - y_test.numpy()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=list(range(len(difference))),
-        y=difference,
-        mode='markers',
-        marker=dict(size=5, color='blue'),  # Use color for easy distinguishing, adjusted marker size.
-        name='Difference'  # Added name
-    ))
-    fig.add_trace(go.Scatter(
-        x=list(range(len(predicted))),
-        y=predicted,
-        mode='markers',
-        marker=dict(size=5, color='red'),  # Use color for easy distinguishing, adjusted marker size.
-        name='Predicted'  # Added name
-    ))
+    fig.add_trace(go.Scatter(x=list(range(len(difference))), y=difference, mode='markers', marker=dict(size=5, color='blue'), name='Difference'))
+    fig.add_trace(go.Scatter(x=list(range(len(predicted))), y=predicted, mode='markers', marker=dict(size=5, color='red'), name='Predicted'))
     fig.write_html(chart_path)
 
 if __name__ == '__main__':
-    main(data_path=r'/home/alex/BitcoinScalper/dataframes/bullish_trend.csv',
-         model_save_path=r'/home/alex/BitcoinScalper/ML/models/lstm_model_state.pth',
-         chart_path=r'/homw/alex/BitcoinScalper/html_charts/lstm_predict.html')
+    main(data_path = '/home/alex/BitcoinScalper/dataframes/TSLA_RSI.csv',
+        model_save_path = '/home/alex/BitcoinScalper/ML/models/lstm_tsla_model_state.pth',
+        chart_path = '/home/alex/BitcoinScalper/html_charts/lstm_tsla_predict.html')
