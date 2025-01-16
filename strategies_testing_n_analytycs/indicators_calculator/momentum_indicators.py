@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from plotly._subplots import make_subplots
 
 
-class IndicatorsCalculator:
+class MomentumIndicatorsCalculator:
     def __init__(self, df:pd.DataFrame, fig):
         self.df = df
         self.fig = fig
@@ -145,7 +145,7 @@ class IndicatorsCalculator:
 def main(data_read_path:str, data_write_path:str, chart_path:str):
     df = pd.read_csv(data_read_path, index_col=0)
     df = df.reset_index()
-    calculator = IndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
+    calculator = MomentumIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
     calculator.ao(fast=5, slow=34, offset=0)
     calculator.rsi(length=18, scalar=100, drift=1, offset=0, xa=80, xb=20)
     calculator.macd(fast=12, slow=26, signal=9, talib=False, offset=0)
@@ -161,24 +161,22 @@ def main(data_read_path:str, data_write_path:str, chart_path:str):
         signal=9, offset=0
     )
 
-    print(df.head())
-    df.to_csv(data_write_path)
+    calculator.df.to_csv(data_write_path)
 
-    #needs min&max columns
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
+    f"""ig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Close"], mode='lines',
         line=dict(color="blue"), name='Close'))
     fig.add_trace(go.Scatter(x=df.index, y=df['RSI'],
                                 mode='lines', name='RSI',
                                 line=dict(color='red')), row=2, col=1)
-    """fig.add_trace(go.Scatter(
+    fig.add_trace(go.Scatter(
         x=df.index, y=df["Max"], mode='lines', marker=dict(color='green', size=0.8), name='Max Points'))
     fig.add_trace(go.Scatter(
-        x=df.index, y=df["Min"], mode='lines', marker=dict(color='red', size=0.8), name='Min Points'))"""
-    fig.write_html(chart_path)
+        x=df.index, y=df["Min"], mode='lines', marker=dict(color='red', size=0.8), name='Min Points'))
+    fig.write_html(chart_path)"""
 
 if __name__ == '__main__':
     main(data_read_path=r'/home/alex/BitcoinScalper/dataframes/TSLA.csv',
-         data_write_path=r'/home/alex/BitcoinScalper/dataframes/TSLA_ALL_INDICATORS.csv',
+         data_write_path=r'/home/alex/BitcoinScalper/dataframes/TSLA_momentum.csv',
          chart_path=r'/home/alex/BitcoinScalper/html_charts/rsi.html')
