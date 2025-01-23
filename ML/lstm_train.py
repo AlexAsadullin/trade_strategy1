@@ -6,28 +6,9 @@ import torch.nn as nn
 
 from copy import deepcopy as dc
 import plotly.graph_objects as go
-
-# Optimized: Combined normalization and reshaping to reduce redundant calculations.
-def normalize_split_data(df: pd.DataFrame, train_part: float):
-    train_size = int(len(df) * train_part)  # Size of training set
-    df['Close'] /= 100000  # Normalize 'Close' column
-    X = df.drop('next_ratio', axis=1).to_numpy()  # Directly convert to NumPy
-    y = df['next_ratio'].to_numpy()
-
-    X_train, X_test = X[:train_size], X[train_size:]
-    y_train, y_test = y[:train_size], y[train_size:]
-    return X_train, X_test, y_train, y_test
-
-# Optimized: Removed unnecessary `unsqueeze(1)` calls for reshaping.
-def create_tensors(X_train, X_test, y_train, y_test):
-    return (
-        torch.tensor(X_train, dtype=torch.float32),
-        torch.tensor(X_test, dtype=torch.float32),
-        torch.tensor(y_train, dtype=torch.float32),
-        torch.tensor(y_test, dtype=torch.float32),
-    )
-
 from torch.utils.data import Dataset
+
+from data_manipulations import split_data, create_tensors, prepare_data_ratio
 
 class TimeSeriesDataset(Dataset):
     def __init__(self, X, y):
@@ -87,28 +68,13 @@ class LSTM(nn.Module):
         print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_loader):.4f}")
         return total_loss / len(train_loader)
 
-def _n_ratio(df, n):
-    for i in range(1, n + 1):
-        df[f'{i}_prev_ratio'] = df['Close'].shift(i) / df['Close'].shift(i + 1)
-    return df
-
-def calculate_metrics(df: pd.DataFrame, n_ratio: int, window_size: int):
-    df['next_ratio'] = df['Close'].shift(-1) / df['Close']
-    df = _n_ratio(df, n_ratio)
-    df['prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=window_size).mean()
-    return df.dropna()
-
-def main(data_path:str, model_save_path:str, chart_path:str):
+def main(data_read_path:str, data_write_path:str, model_save_path:str, chart_path:str):
     # Load and preprocess data
-    data = pd.read_csv(data_path, index_col=0).drop('Date', axis=1)
-    df = calculate_metrics(dc(data), n_ratio=15, window_size=50)
-    df = df.dropna()
-    df.to_csv('/home/alex/BitcoinScalper/dataframes/TSLA_RSI_LSTM.csv')
+    data = pd.read_csv(data_read_path, index_col=0)
+    
+    df = prepare_data_ratio(data, data_write_path=data_write_path, n_ratio=7, window_size=30)
 
-    print(df.head())
-    print(df.columns)
-
-    X_train, X_test, y_train, y_test = normalize_split_data(df, 0.8)
+    X_train, X_test, y_train, y_test = split_data(df, 0.8)
     X_train, X_test, y_train, y_test = create_tensors(X_train, X_test, y_train, y_test)
 
     # Prepare data loaders
@@ -137,12 +103,49 @@ def main(data_path:str, model_save_path:str, chart_path:str):
         predicted = model(X_test.to(device)).cpu().numpy()
     difference = predicted - y_test.numpy()
 
-    fig = go.Figure()
+    """fig = go.Figure()
     fig.add_trace(go.Scatter(x=list(range(len(difference))), y=difference, mode='markers', marker=dict(size=5, color='blue'), name='Difference'))
     fig.add_trace(go.Scatter(x=list(range(len(predicted))), y=predicted, mode='markers', marker=dict(size=5, color='red'), name='Predicted'))
-    fig.write_html(chart_path)
+    fig.write_html(chart_path)"""
 
 if __name__ == '__main__':
-    main(data_path = '/home/alex/BitcoinScalper/dataframes/TSLA_RSI.csv',
-        model_save_path = '/home/alex/BitcoinScalper/ML/models/lstm_tsla_model_state.pth',
-        chart_path = '/home/alex/BitcoinScalper/html_charts/lstm_tsla_predict.html')
+    data = [
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_cycles.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_cycles_TEST.csv" , 
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_cycles.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_momentum.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap.csv", 
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_overlap.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_performance.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_performance_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_performance.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_trend.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_trend_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_trend.pkl"
+                ], # no
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_volume.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_volume_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_volume.pkl"
+                ], # no     
+        ]
+
+    for data_read_path, data_write_path, model_save_path in data:
+        main(data_read_path = data_read_path,
+             data_write_path=data_write_path,
+            model_save_path = model_save_path,
+            chart_path = ''
+            )
+        print(model_save_path.split('/')[-1])

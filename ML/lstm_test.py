@@ -1,23 +1,41 @@
-from lstm_train import normalize_split_data, create_trensors, TimeSeriesDataset, LSTM
+from lstm_train import split_data, create_tensors, TimeSeriesDataset, LSTM
 import pandas as pd
 from copy import deepcopy as dc
 import plotly.graph_objects as go
 import torch
+import numpy as np
+import torch.nn as nn
 
-def test_lstm(data_path, model_read_path, chart_path):
+
+def directional_accuracy_score(y_test, y_pred):
+    if not isinstance(y_test, torch.Tensor):
+        y_test = torch.tensor(y_test, dtype=torch.float32)
+    if not isinstance(y_pred, torch.Tensor):
+        y_pred = torch.tensor(y_pred, dtype=torch.float32)
+
+    sign_agreement = torch.sign(y_pred - 1) * torch.sign(y_test - 1)
+    confidence_weight = torch.abs(y_pred - 1)
+    
+    return torch.mean(sign_agreement * confidence_weight)
+
+def test_lstm(data_read_path, model_read_path, chart_path):
     device = 'cpu'
-    data = pd.read_csv(data_path, index_col=0)
-    df = dc(data)
-    df = df.dropna(axis='rows')
+    df = pd.read_csv(data_read_path, index_col=0)
 
-    X_train, X_test, y_train, y_test = normalize_split_data(df, 0.8)
-    X_train, X_test, y_train, y_test = create_trensors(X_train, X_test, y_train, y_test)
+    X_train, X_test, y_train, y_test = split_data(df, 0.8)
+    X_train, X_test, y_train, y_test = create_tensors(X_train.astype(np.float32),
+                                                      X_test.astype(np.float32),
+                                                       y_train.astype(np.float32),
+                                                       y_test.astype(np.float32))
 
     train_dataset = TimeSeriesDataset(X_train, y_train)
     test_dataset = TimeSeriesDataset(X_test, y_test)
 
-    model = LSTM(1, 4, 1, device='cpu')
-    model.to(device)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = LSTM(input_size=X_train.shape[1], hidden_size=64, num_stacked_layers=2,
+                 device=device, loss_function=nn.L1Loss()
+                 ).to(device)
+    
     model.load_state_dict(torch.load(model_read_path))
     model.eval()
     # model = torch.load('models/lstm_model.pth')
@@ -31,6 +49,10 @@ def test_lstm(data_path, model_read_path, chart_path):
     difference = y_test - predicted
     print(difference, len(difference))
 
+    print('directional accuracy:', directional_accuracy_score(y_test=y_test, y_pred=predicted))
+    # plot this
+
+    # plot real vs predicted only on y_test
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=list(range(len(difference))),
@@ -50,6 +72,6 @@ def test_lstm(data_path, model_read_path, chart_path):
     fig.write_html(chart_path)
 
 if __name__ == '__main__':
-    test_lstm(data_path=r'/home/alex/BitcoinScalper/dataframes/bullish_trend_metrics.csv',
-               model_read_path=r'/home/alex/BitcoinScalper/ML/models/lstm_model_state.pth',
-               chart_path=r'/homw/alex/BitcoinScalper/html_charts/lstm_predict.html')
+    test_lstm(data_read_path=r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum_TEST.csv",
+               model_read_path=r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_momentum.pkl",
+               chart_path=r'/home/alex/BitcoinScalper/html_charts/LSTM_TSLA_momentum.html')
