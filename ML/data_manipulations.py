@@ -4,14 +4,13 @@ import torch
 
 # Optimized: Combined normalization and reshaping to reduce redundant calculations.
 def split_data(df: pd.DataFrame, train_part: float):
-    train_size = int(len(df) * train_part)  # Size of training set
-    #df['Close'] /= 100000  # Normalize 'Close' column
-    X = df.drop('next_ratio', axis=1)  # Directly convert to NumPy
+    train_size = int(len(df) * train_part)
+    X = df.drop('next_ratio', axis=1)  
     y = df['next_ratio']
 
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
-    return X_train, X_test, y_train, y_test
+    return X_train.to_numpy(), X_test.to_numpy(), y_train.to_numpy(), y_test.to_numpy()
 
 # Optimized: Removed unnecessary `unsqueeze(1)` calls for reshaping.
 def create_tensors(X_train, X_test, y_train, y_test):
@@ -27,7 +26,7 @@ def _n_ratio(df, n):
         df[f'{i}_prev_ratio'] = df['Close'].shift(i) / df['Close'].shift(i + 1)
     return df
 
-def prepare_data_ratio(df: pd.DataFrame, data_write_path, n_ratio=7, window_size=30):
+def prepare_data_ratio(df: pd.DataFrame, data_write_path:str = '', n_ratio=7, window_size=30):
     try:
         df = df.drop(['Date'], axis=1)
     except Exception as e:
@@ -35,10 +34,11 @@ def prepare_data_ratio(df: pd.DataFrame, data_write_path, n_ratio=7, window_size
 
     df['next_ratio'] = df['Close'].shift(-1) / df['Close']
     df = _n_ratio(df, n_ratio)
-    df['prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=window_size).mean()
+    df[f'{window_size}_prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=window_size).mean()
 
     df = df.dropna()
-    df.to_csv(data_write_path)
+    if data_write_path != '':
+        df.to_csv(data_write_path)
 
     print(len(df))
     print(df.columns)

@@ -9,6 +9,40 @@ import plotly.graph_objects as go
 from torch.utils.data import Dataset
 
 from data_manipulations import split_data, create_tensors, prepare_data_ratio
+from custom_metrics import directional_accuracy_score
+
+tsla_data = [
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_cycles.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_cycles_TEST.csv" , 
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_cycles.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_momentum.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap.csv", 
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_overlap.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_performance.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_performance_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_performance.pkl"
+                ],
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_trend.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_trend_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_trend.pkl"
+                ], # no
+            [
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_volume.csv",
+            r"/home/alex/BitcoinScalper/dataframes/TSLA_volume_TEST.csv",
+            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_volume.pkl"
+                ], # no     
+        ]
 
 class TimeSeriesDataset(Dataset):
     def __init__(self, X, y):
@@ -70,12 +104,15 @@ class LSTM(nn.Module):
 
 def main(data_read_path:str, data_write_path:str, model_save_path:str, chart_path:str):
     # Load and preprocess data
-    data = pd.read_csv(data_read_path, index_col=0)
+    data = pd.read_csv(data_read_path, index_col=0).drop('Time', axis=1)
     
     df = prepare_data_ratio(data, data_write_path=data_write_path, n_ratio=7, window_size=30)
 
     X_train, X_test, y_train, y_test = split_data(df, 0.8)
-    X_train, X_test, y_train, y_test = create_tensors(X_train, X_test, y_train, y_test)
+    X_train, X_test, y_train, y_test = create_tensors(X_train.to_numpy(dtype=np.float32),
+                                                      X_test.to_numpy(dtype=np.float32),
+                                                      y_train.to_numpy(dtype=np.float32),
+                                                      y_test.to_numpy(dtype=np.float32))
 
     # Prepare data loaders
     batch_size = 16
@@ -100,8 +137,14 @@ def main(data_read_path:str, data_write_path:str, model_save_path:str, chart_pat
     # Inference and visualization
     model.eval()
     with torch.no_grad():
-        predicted = model(X_test.to(device)).cpu().numpy()
-    difference = predicted - y_test.numpy()
+        X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+        predicted = model(X_test_tensor).detach().numpy()
+        #predicted = model(X_test_tensor).to('cpu').numpy()
+
+    difference = y_test - predicted
+    print(difference, len(difference))
+
+    print('directional accuracy:', directional_accuracy_score(y_test=y_test, y_pred=predicted))
 
     """fig = go.Figure()
     fig.add_trace(go.Scatter(x=list(range(len(difference))), y=difference, mode='markers', marker=dict(size=5, color='blue'), name='Difference'))
@@ -109,38 +152,19 @@ def main(data_read_path:str, data_write_path:str, model_save_path:str, chart_pat
     fig.write_html(chart_path)"""
 
 if __name__ == '__main__':
+    
     data = [
-            [
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_cycles.csv",
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_cycles_TEST.csv" , 
-            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_cycles.pkl"
-                ],
-            [
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum.csv",
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_momentum_TEST.csv",
-            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_momentum.pkl"
-                ],
-            [
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap.csv", 
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap_TEST.csv",
-            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_overlap.pkl"
-                ],
-            [
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_performance.csv",
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_performance_TEST.csv",
-            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_performance.pkl"
-                ],
-            [
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_trend.csv",
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_trend_TEST.csv",
-            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_trend.pkl"
-                ], # no
-            [
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_volume.csv",
-            r"/home/alex/BitcoinScalper/dataframes/TSLA_volume_TEST.csv",
-            r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_volume.pkl"
-                ], # no     
+        [
+            r'/home/alex/BitcoinScalper/dataframes/LKOH_momentum.csv',
+            r'/home/alex/BitcoinScalper/dataframes/LKOH_momentum_LSTM.csv',
+            r'/home/alex/BitcoinScalper/ML/models/LSTM_LKOH_momentum.pkl'
+        ],
+        [
+            r'/home/alex/BitcoinScalper/dataframes/LKOH_trend.csv',
+            r'/home/alex/BitcoinScalper/dataframes/LKOH_trend_LSTM.csv',
+            r'/home/alex/BitcoinScalper/ML/models/LSTM_LKOH_trend.pkl'
         ]
+    ]
 
     for data_read_path, data_write_path, model_save_path in data:
         main(data_read_path = data_read_path,

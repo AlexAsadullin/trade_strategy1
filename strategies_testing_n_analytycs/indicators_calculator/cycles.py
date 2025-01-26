@@ -16,13 +16,11 @@ class CyclesIndicatorsCalculator:
             offset=offset            
         )
 
-def main(data_read_path, data_write_path, chart_path):
-    df = pd.read_csv(data_read_path).drop(['Date'], axis=1)
+def main(df:pd.DataFrame, data_write_path: str = ''):
     calculator = CyclesIndicatorsCalculator(df)
     calculator.ebsw(length=20, fast=4, slow=10, signal=6, scalar=1.0, offset=0)
-    df.to_csv(data_write_path)
+    if data_write_path != '':
+        calculator.df.to_csv(data_write_path)
+    
+    return calculator.df
 
-if __name__ == '__main__':
-    main(data_read_path=r"/home/alex/BitcoinScalper/dataframes/TSLA.csv",
-        data_write_path=r'/home/alex/BitcoinScalper/dataframes/TSLA_cycles.csv',
-        chart_path=r"/home/alex/BitcoinScalper/html_charts/TSLA_performance.html")

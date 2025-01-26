@@ -35,7 +35,7 @@ def get_by_timeframe_figi(figi: str, days_back_begin: int, ticker: str, interval
             data_for_df['High'].append(high_price)
             data_for_df['Low'].append(low_price)
             data_for_df['Volume'].append(volume)
-            data_for_df['Time'].append(candle.time.strftime('%Y-%m-%d %H:%M'))
+            data_for_df['Date'].append(candle.time.strftime('%Y-%m-%d %H:%M'))
             data_for_df['IsGrowing'].append(is_growing)
             data_for_df['AvgOpenClose'].append(abs(open_price - close_price))
             data_for_df['DiffOpenClose'].append(abs(open_price - close_price))
@@ -127,5 +127,5 @@ def historical_data_analyze(data: list, ):
 if __name__ == '__main__':
     load_dotenv()
     interval = CandleInterval.CANDLE_INTERVAL_4_HOUR
-    df = get_massive_by_timeframe_figi(step_back_days=100, figi='BBG004730N88', ticker='SBER', interval=interval,
-                                       start_interval_back=0, end_iterval_back=17000, save_table=True)
+    df = get_massive_by_timeframe_figi(step_back_days=10, figi='BBG004731032', ticker='LKOH', interval=interval,
+                                       start_interval_back=3680, end_iterval_back=17000, save_table=True)

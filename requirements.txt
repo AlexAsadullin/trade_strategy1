@@ -1,14 +1,14 @@
 python-dotenv
-datetime
 pandas
 pandas-ta
 numpy
-plotly
 matplotlib
+plotly
 tinkoff
 tinkoff-investments
+yfinance
 scikit-learn
 torch
+hmmlearn
 threading
 telebot
-hmmlearn

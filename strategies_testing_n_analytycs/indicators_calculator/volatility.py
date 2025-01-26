@@ -106,10 +106,7 @@ class VolatilityIndicatorsCalculator:
         )
         print('natr')
 
-def main(data_read_path: str, data_write_path: str, chart_path: str):
-    df = pd.read_csv(data_read_path, index_col=0)
-    df = df.reset_index()
-
+def main(df: pd.DataFrame, data_write_path: str=''):
     calculator = VolatilityIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
     
     calculator.bbands(length=20, std=2, talib=False, offset=0)
@@ -123,9 +120,6 @@ def main(data_read_path: str, data_write_path: str, chart_path: str):
     calculator.massi(length=25, offset=0)
     calculator.natr(length=14, scalar=100, offset=0)
 
-    calculator.df.to_csv(data_write_path)
-
-if __name__ == '__main__':
-    main(data_read_path=r'/home/alex/BitcoinScalper/dataframes/TSLA.csv',
-         data_write_path=r'/home/alex/BitcoinScalper/dataframes/TSLA_volume.csv',
-         chart_path=r'/home/alex/BitcoinScalper/html_charts/rsi.html')
+    if data_write_path != '':
+        calculator.df.to_csv(data_write_path)
+    return calculator.df

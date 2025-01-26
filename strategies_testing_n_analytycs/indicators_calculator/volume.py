@@ -100,9 +100,7 @@ class VolumeIndicatorsCalculator:
             nbins=nbins, 
             offset=offset)], axis='columns')
 
-def main(data_read_path: str, data_write_path: str, chart_path: str):
-    df = pd.read_csv(data_read_path, index_col=0)
-    df = df.reset_index()
+def main(df:pd.DataFrame, data_write_path: str):
     calculator = VolumeIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
     
     calculator.ad(length=14, offset=0)
@@ -116,9 +114,6 @@ def main(data_read_path: str, data_write_path: str, chart_path: str):
     calculator.pvt(offset=0)
     calculator.vp(length=30, nbins=30, offset=0)
     
-    calculator.df.to_csv(data_write_path)
-
-if __name__ == '__main__':
-    main(data_read_path=r'/home/alex/BitcoinScalper/dataframes/TSLA.csv',
-         data_write_path=r'/home/alex/BitcoinScalper/dataframes/TSLA_volume.csv',
-         chart_path=r'/home/alex/BitcoinScalper/html_charts/TSLA_volume.html')
+    if data_write_path != '':
+        calculator.df.to_csv(data_write_path)
+    return calculator.df

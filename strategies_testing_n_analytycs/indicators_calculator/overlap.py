@@ -98,12 +98,7 @@ class OverlapIndicatorsCalculator:
         )
 
 
-def main(data_read_path, data_write_path, chart_path):
-    #df.reset_index(inplace=True)
-    df = pd.read_csv(data_read_path).drop(['Date'], axis=1)
-    df.index = pd.to_datetime(df.index)
-    month_index = df.index.to_period('M')
-
+def main(df:pd.DataFrame, data_write_path:str=''):
     calculator = OverlapIndicatorsCalculator(df)
 
     calculator.add_ema(length=20, talib=False, offset=0)
@@ -117,9 +112,12 @@ def main(data_read_path, data_write_path, chart_path):
     calculator.add_alma(length=9, sigma=6, offset=0, drift=1)
     calculator.add_wma(length=9, offset=0)
 
-    calculator.df.to_csv(data_write_path)
+    if data_write_path != '':
+        calculator.df.to_csv(data_write_path)
+    
+    return calculator.df
 
 if __name__ == "__main__":
-    data_read_path=r"/home/alex/BitcoinScalper/dataframes/TSLA.csv",
-    data_write_path=r"/home/alex/BitcoinScalper/dataframes/TSLA_overlap.csv",
+    data_read_path=r"/home/alex/BitcoinScalper/data_collecting/tinkoff_data/prices_massive_LKOH_4_HOUR_2025-01-25.csv",
+    data_write_path=r"/home/alex/BitcoinScalper/dataframes/LKOH_overlap.csv",
     chart_path=r"/home/alex/BitcoinScalper/html_charts/TSLA_performance.html"
