@@ -97,13 +97,13 @@ def main(df:pd.DataFrame, data_write_path: str=''):
     calculator.add_chop(length=14, scalar=100, offset=0)
     calculator.add_cksp(kc_mult=1.0, atr_length=10, offset=0)
     calculator.add_dpo(length=20, centered=True, offset=0)
-    calculator.add_psar(af=0.02, max_af=0.2, offset=0)
+    #calculator.add_psar(af=0.02, max_af=0.2, offset=0)
     calculator.add_ttm_trend(length=6, offset=0)
     calculator.add_vhf(length=28, offset=0)
     calculator.add_vortex(length=14, offset=0)
     #calculator.add_tsignals(trend_length=14, signal_length=5, offset=0)
     if data_write_path != '':
         calculator.df.to_csv(data_write_path)
-
-    return calculator.df
+    calculator.df.to_csv('trend.csv')
+    return calculator.df.dropna()
     

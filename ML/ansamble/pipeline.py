@@ -1,3 +1,4 @@
+import joblib
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -41,11 +42,12 @@ def process_data(df: pd.DataFrame, train_part: float, scaler):
     frames['overlap'] = split_data(df=overlap(df), train_part=train_part, scaler=scaler)
     frames['trend'] = split_data(df=trend(df), train_part=train_part, scaler=scaler)
     frames['volatility'] = split_data(df=volatility(df), train_part=train_part, scaler=scaler)
-    frames['pure'] = split_data(df=df, train_part=train_part, scaler=scaler)
+    frames['pure'] = split_data(df=df.dropna(), train_part=train_part, scaler=scaler)
     return frames
 
 def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
-                   model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=16, model_loss_function=nn.L1Loss()):
+                   model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=16, model_loss_function=nn.L1Loss(),
+                   training_num_epochs:int=30):
     
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
@@ -63,8 +65,7 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
                      device=device, loss_function=model_loss_function).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-        num_epochs = 30
-        for epoch in range(num_epochs):
+        for epoch in range(training_num_epochs):
             avg_loss = model.train_validate_one_epoch(train_loader, optimizer, epoch)
         model.eval()
         with torch.no_grad():
@@ -74,20 +75,35 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         print(indicator, directional_accuracy_score(y_test=y_test, y_pred=predicted))
         trained_models[indicator] = model
 
-        torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/{indicator}_LSTM.pkl')
+        torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pkl')
     return trained_models
     
-def train_all_hmm():
+def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
+                   model_n_components: int=4, model_covariance_type:str="full", model_n_iter:int=500,
+                   model_random_state:int=42,
+                   ):
+    
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
+
     for indicator in ready_dataset.keys():
         X_train, X_test, y_train, y_test = ready_dataset[indicator]
-        model = GaussianHMM(n_components=4, covariance_type="full", n_iter=500, random_state=42)
+        model = GaussianHMM(n_components=model_n_components, covariance_type=model_covariance_type,
+                            n_iter=model_n_iter, random_state=model_random_state)
+        model.fit(X_train)
+
+        y_pred_proba = model.predict_proba(X_test)[:, 1]
+        y_pred = (y_pred_proba > 0.5).astype(int)
+
+        print(directional_accuracy_score(y_test=y_test, y_pred=y_pred))
+        trained_models[indicator] = model
+
+        joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
+    return trained_models
 
 
 if __name__ == '__main__':
-    train_all_lstm(
+    train_all_hmm(
         tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
-        model_hidden_size=64, model_num_stacked_layers=5, model_batch_size=16, model_loss_function=nn.L1Loss()
-    )
+        )

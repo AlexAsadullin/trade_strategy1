@@ -10,5 +10,6 @@ yfinance
 scikit-learn
 torch
 hmmlearn
+joblib
 threading
 telebot

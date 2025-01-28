@@ -115,7 +115,7 @@ def main(df:pd.DataFrame, data_write_path:str=''):
     if data_write_path != '':
         calculator.df.to_csv(data_write_path)
     
-    return calculator.df
+    return calculator.df.dropna()
 
 if __name__ == "__main__":
     data_read_path=r"/home/alex/BitcoinScalper/data_collecting/tinkoff_data/prices_massive_LKOH_4_HOUR_2025-01-25.csv",

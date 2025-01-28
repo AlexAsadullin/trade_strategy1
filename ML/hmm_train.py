@@ -52,8 +52,6 @@ def main(data_read_path: str, data_write_path: str, model_save_path: str):
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    df['y'] = pd.concat([y_train, y_test])
-
     hmm_model = GaussianHMM(n_components=4, covariance_type="full", n_iter=500, random_state=42)
     hmm_model.fit(X_train_scaled)
 
@@ -62,7 +60,7 @@ def main(data_read_path: str, data_write_path: str, model_save_path: str):
     y_pred_proba = hmm_model.predict_proba(X_test_scaled)[:, 1]
     y_pred = (y_pred_proba > 0.5).astype(int)
 
-    print(directional_accuracy_score(y_true=y_test, y_pred_proba=y_pred))
+    print(directional_accuracy_score(y_test=y_test, y_pred_proba=y_pred))
 
 if __name__ == '__main__':
     main(

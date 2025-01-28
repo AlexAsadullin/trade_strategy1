@@ -121,4 +121,5 @@ def main(df: pd.DataFrame, data_write_path: str=''):
 
     if data_write_path != '':
         calculator.df.to_csv(data_write_path)
-    return calculator.df
+    calculator.df.to_csv("volatility.csv")
+    return calculator.df.dropna()
