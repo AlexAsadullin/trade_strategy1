@@ -6,10 +6,10 @@ import torch.nn as nn
 
 from copy import deepcopy as dc
 import plotly.graph_objects as go
-from torch.utils.data import Dataset
 
 from data_manipulations import split_data, create_tensors, prepare_data_ratio
 from custom_metrics import directional_accuracy_score
+from custom_datasets import TimeSeriesDataset
 
 tsla_data = [
             [
@@ -43,17 +43,6 @@ tsla_data = [
             r"/home/alex/BitcoinScalper/ML/models/LSTM_TSLA_volume.pkl"
                 ], # no     
         ]
-
-class TimeSeriesDataset(Dataset):
-    def __init__(self, X, y):
-        self.X = X
-        self.y = y
-
-    def __len__(self):
-        return len(self.X)
-
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
 
 class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_stacked_layers, device, loss_function):

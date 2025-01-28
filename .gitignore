@@ -10,3 +10,4 @@ data_collecting/reports_data/
 data_collecting/training_data/
 html_charts/
 ML/models/
+ML/ansamble/trained_models

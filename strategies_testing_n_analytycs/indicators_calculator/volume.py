@@ -4,9 +4,8 @@ import plotly.graph_objects as go
 from plotly._subplots import make_subplots
 
 class VolumeIndicatorsCalculator:
-    def __init__(self, df: pd.DataFrame, fig):
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.fig = fig
 
     def ad(self, length=None, offset=None):
         self.df["ad"] = ta.ad(
@@ -101,7 +100,7 @@ class VolumeIndicatorsCalculator:
             offset=offset)], axis='columns')
 
 def main(df:pd.DataFrame, data_write_path: str):
-    calculator = VolumeIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
+    calculator = VolumeIndicatorsCalculator(df=df)
     
     calculator.ad(length=14, offset=0)
     calculator.adosc(fast=3, slow=10, offset=0)

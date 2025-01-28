@@ -3,9 +3,8 @@ import pandas as pd
 from plotly._subplots import make_subplots
 
 class VolatilityIndicatorsCalculator:
-    def __init__(self, df: pd.DataFrame, fig):
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.fig = fig
 
     def bbands(self, length=20, std=2, talib=False, offset=None):
         self.df = pd.concat([self.df, ta.bbands(
@@ -107,7 +106,7 @@ class VolatilityIndicatorsCalculator:
         print('natr')
 
 def main(df: pd.DataFrame, data_write_path: str=''):
-    calculator = VolatilityIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
+    calculator = VolatilityIndicatorsCalculator(df=df)
     
     calculator.bbands(length=20, std=2, talib=False, offset=0)
     calculator.atr(length=14, scalar=1.0, offset=0)

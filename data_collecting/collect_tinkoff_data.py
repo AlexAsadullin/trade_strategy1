@@ -11,7 +11,7 @@ import time
 def quote_to_float(data):
     return float(data.units + data.nano / (10 ** 9))
 
-def get_by_timeframe_figi(figi: str, days_back_begin: int, ticker: str, interval: CandleInterval,
+def get_by_timeframe_figi(figi: str, days_back_begin: int, interval: CandleInterval, ticker: str='', 
                      days_back_end: int = 0, save_table: bool = True) -> pd.DataFrame:
     TOKEN = os.getenv("TINKOFF_TOKEN_REAL")
     from_timedelta = now() - timedelta(days=days_back_begin)

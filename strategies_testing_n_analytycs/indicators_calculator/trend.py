@@ -4,9 +4,8 @@ from plotly._subplots import make_subplots
 
 
 class TrendIndicatorsCalculator:
-    def __init__(self, df: pd.DataFrame, fig=None):
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.fig = fig
 
     def add_adx(self, length: int = 14, scalar: float = 100, drift: int = 1, offset: int = 0):
         self.df = pd.concat([self.df, ta.adx(
@@ -91,7 +90,7 @@ class TrendIndicatorsCalculator:
             offset=offset)], axis='columns')
 
 def main(df:pd.DataFrame, data_write_path: str=''):
-    calculator = TrendIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
+    calculator = TrendIndicatorsCalculator(df=df)
     
     calculator.add_adx(length=14, scalar=100, drift=1, offset=0)
     calculator.add_aroon(length=25, offset=0)

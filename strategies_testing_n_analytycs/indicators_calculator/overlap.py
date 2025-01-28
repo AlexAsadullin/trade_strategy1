@@ -103,7 +103,7 @@ def main(df:pd.DataFrame, data_write_path:str=''):
 
     calculator.add_ema(length=20, talib=False, offset=0)
     calculator.add_supertrend(length=10, multiplier=3.0, offset=0)
-    calculator.add_vwap(offset=0)
+    #calculator.add_vwap(offset=0)
     calculator.add_ichimoku(tenkan=9, kijun=26, senkou=52, lookahead=False, offset=0)
     calculator.add_kama(length=10, fast=2, slow=30, offset=0)
     calculator.add_hma(length=16, offset=0)

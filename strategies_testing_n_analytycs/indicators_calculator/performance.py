@@ -5,9 +5,8 @@ from plotly.subplots import make_subplots
 
 
 class PerformanceIndicatorsCalculator:
-    def __init__(self, df: pd.DataFrame, fig=None):
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.fig = fig
 
     def add_drawdown(self, method: str = "percent", offset: int = 0):
         self.df = pd.concat([self.df, ta.drawdown(
@@ -33,7 +32,7 @@ class PerformanceIndicatorsCalculator:
 
 
 def main(df:pd.DataFrame, data_write_path: str=''):
-    calculator = PerformanceIndicatorsCalculator(df=df, fig=make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02))
+    calculator = PerformanceIndicatorsCalculator(df=df)
 
     calculator.add_drawdown(method="percent", offset=0)
     calculator.add_log_return(length=1, cumulative=False, offset=0)

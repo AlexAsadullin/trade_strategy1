@@ -1,17 +1,23 @@
 import pandas as pd
 import torch
+import numpy as np
 #from copy import deepcopy as dc
 
 # Optimized: Combined normalization and reshaping to reduce redundant calculations.
-def split_data(df: pd.DataFrame, train_part: float):
+def split_data(df: pd.DataFrame, train_part: float, scaler=None):
     train_size = int(len(df) * train_part)
     X = df.drop('next_ratio', axis=1)  
     y = df['next_ratio']
 
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
-    return X_train.to_numpy(), X_test.to_numpy(), y_train.to_numpy(), y_test.to_numpy()
-
+    if scaler:
+        return (
+            scaler.fit_transform(X_train.to_numpy(dtype=np.float32)), scaler.transform(X_test.to_numpy(dtype=np.float32)),
+            scaler.fit_transform(y_train.to_numpy(dtype=np.float32).reshape(-1, 1)), scaler.transform(y_test.to_numpy(dtype=np.float32).reshape(-1, 1)),
+        )
+    else:
+        return X_train.to_numpy(), X_test.to_numpy(), y_train.to_numpy(), y_test.to_numpy()
 # Optimized: Removed unnecessary `unsqueeze(1)` calls for reshaping.
 def create_tensors(X_train, X_test, y_train, y_test):
     return (

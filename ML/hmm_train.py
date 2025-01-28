@@ -57,12 +57,6 @@ def main(data_read_path: str, data_write_path: str, model_save_path: str):
     hmm_model = GaussianHMM(n_components=4, covariance_type="full", n_iter=500, random_state=42)
     hmm_model.fit(X_train_scaled)
 
-    df_train["Predicted_State"] = hmm_model.predict(X_train_scaled)
-    df_train["Predicted_Change"] = (hmm_model.predict_proba(X_train_scaled)[:, 1] > 0.5).astype(int)
-
-    accuracy = (df_train["Predicted_Change"] == y_train).mean()
-    print(f"Model Accuracy: {accuracy:.2f}")
-
     joblib.dump(hmm_model, model_save_path)
 
     y_pred_proba = hmm_model.predict_proba(X_test_scaled)[:, 1]
@@ -76,3 +70,9 @@ if __name__ == '__main__':
         data_write_path=r"/home/alex/BitcoinScalper/dataframes/LKOH_hmm.csv",
         model_save_path=r"/home/alex/BitcoinScalper/ML/models/HMM_LKOH.pkl",
     )
+
+"""df_train["Predicted_State"] = hmm_model.predict(X_train_scaled)
+    df_train["Predicted_Change"] = (hmm_model.predict_proba(X_train_scaled)[:, 1] > 0.5).astype(int)
+
+    accuracy = (df_train["Predicted_Change"] == y_train).mean()
+    print(f"Model Accuracy: {accuracy:.2f}")"""

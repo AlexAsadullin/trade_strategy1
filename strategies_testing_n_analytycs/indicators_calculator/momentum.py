@@ -5,9 +5,8 @@ from plotly._subplots import make_subplots
 
 
 class MomentumIndicatorsCalculator:
-    def __init__(self, df:pd.DataFrame, fig):
+    def __init__(self, df:pd.DataFrame):
         self.df = df
-        self.fig = fig
 
     def ao(self, fast: int = 5, slow: int = 34, offset: int = 0):
         self.df["ao"] = ta.ao(
@@ -150,7 +149,7 @@ def main(df:pd.DataFrame, data_write_path:str = ''):
     calculator.stoch(k=14, d=3, smooth_k=3, drift=1, offset=0)
     calculator.cci(length=20, c=0.015, talib=False, drift=1, offset=0)
     calculator.willr(length=14, talib=False, drift=1, offset=0)
-    calculator.stc(fast=23, slow=50, factor=0.5, drift=1, offset=0)
+    #calculator.stc(fast=23, slow=50, factor=0.5, drift=1, offset=0)
     calculator.tsi(fast=25, slow=13, scalar=100, drift=1, offset=0)
     calculator.fisher(length=9, signal=1, offset=0)
     calculator.kst(
@@ -161,5 +160,5 @@ def main(df:pd.DataFrame, data_write_path:str = ''):
     if data_write_path != '':
         calculator.df.to_csv(data_write_path)
 
-    return calculator.df
+    return calculator.df.dropna()
 
