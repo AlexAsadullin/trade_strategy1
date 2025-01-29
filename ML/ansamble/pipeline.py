@@ -1,5 +1,6 @@
 import joblib
 import pandas as pd
+import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.preprocessing import StandardScaler
@@ -7,6 +8,7 @@ from tinkoff.invest import CandleInterval
 import sys
 import os
 from hmmlearn.hmm import GaussianHMM
+from torch.utils.data import Dataset, DataLoader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -16,6 +18,7 @@ from data_manipulations import prepare_data_ratio, split_data
 from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
 from custom_datasets import TimeSeriesDataset
 from lstm_train import LSTM
+from transformer import TransformerModel
 from custom_metrics import directional_accuracy_score
 
 #indicators calsulator
@@ -37,12 +40,15 @@ def load_tinkoff(figi: str, days_back_begin: int, interval: CandleInterval, days
 
 def process_data(df: pd.DataFrame, train_part: float, scaler):
     df = prepare_data_ratio(df=df, n_ratio=5, window_size=40)
+    df=df.dropna()
+    print('are there any nan?', df.isna().any().any())
+    print('all nans:', df.isna().sum().sum())
     frames = dict()
     frames['momentum'] = split_data(df=momentum(df), train_part=train_part, scaler=scaler)
     frames['overlap'] = split_data(df=overlap(df), train_part=train_part, scaler=scaler)
     frames['trend'] = split_data(df=trend(df), train_part=train_part, scaler=scaler)
     frames['volatility'] = split_data(df=volatility(df), train_part=train_part, scaler=scaler)
-    frames['pure'] = split_data(df=df.dropna(), train_part=train_part, scaler=scaler)
+    frames['pure'] = split_data(df=df.dropna(axis='index'), train_part=train_part, scaler=scaler)
     return frames
 
 def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
@@ -55,6 +61,10 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
 
     for indicator in ready_dataset.keys():
         X_train, X_test, y_train, y_test = ready_dataset[indicator]
+
+        if np.isnan(X_train).any() or np.isnan(X_test).any() or np.isnan(y_train).any() or np.isnan(y_test).any():
+            print(f"NaN values detected in dataset '{indicator}'!")
+            continue
         
         train_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_train, y_train), batch_size=model_batch_size, shuffle=True)
         test_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_test, y_test), batch_size=model_batch_size, shuffle=False)
@@ -79,19 +89,28 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
     return trained_models
     
 def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
-                   model_n_components: int=4, model_covariance_type:str="full", model_n_iter:int=500,
+                   model_n_components: int=3, model_covariance_type:str="full", model_n_iter:int=50,
                    model_random_state:int=42,
                    ):
-    
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
 
     for indicator in ready_dataset.keys():
         X_train, X_test, y_train, y_test = ready_dataset[indicator]
+
+        if X_train.shape[0] < model_n_components:
+            print(f"Skipping '{indicator}' - Not enough data for {model_n_components} components")
+            continue
+        if np.isnan(X_train).any() or np.isnan(X_test).any() or np.isnan(y_train).any() or np.isnan(y_test).any():
+            print(f"NaN values detected in dataset '{indicator}'!")
+            continue  # Skip this iteration to avoid training on NaN values
+
         model = GaussianHMM(n_components=model_n_components, covariance_type=model_covariance_type,
-                            n_iter=model_n_iter, random_state=model_random_state)
+                            n_iter=model_n_iter, random_state=model_random_state, tol=1e-4, verbose=True)
+
         model.fit(X_train)
+        print(indicator, 'is trained')
 
         y_pred_proba = model.predict_proba(X_test)[:, 1]
         y_pred = (y_pred_proba > 0.5).astype(int)
@@ -103,7 +122,48 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
     return trained_models
 
 
+def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+                    model_loss_function=nn.L1Loss(), training_num_epochs:int=3):
+    df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+    trained_models = dict()
+    ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    for indicator in ready_dataset.keys():
+        X_train, X_test, y_train, y_test = ready_dataset[indicator]
+
+        if np.isnan(X_train).any() or np.isnan(X_test).any() or np.isnan(y_train).any() or np.isnan(y_test).any():
+            print(f"NaN values detected in dataset '{indicator}'!")
+            continue
+
+        train_dataset = TimeSeriesDataset(X_train, y_train)
+        test_dataset = TimeSeriesDataset(X_test, y_test)
+        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    
+        input_dim = X_train.shape[1]
+        model = TransformerModel(input_dim, device=device, loss_function=model_loss_function)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    
+        for epoch in range(training_num_epochs):
+            avg_loss = model.train_validate_one_epoch(train_loader, optimizer, epoch)
+
+        model.eval()
+        actuals, predictions = [], []
+        with torch.no_grad():
+            for x_batch, y_batch in test_loader:
+                x_batch = x_batch.to(device)
+                y_pred = model(x_batch).cpu().numpy()
+                predictions.extend(y_pred)
+                actuals.extend(y_batch.numpy())
+
+        print(indicator, directional_accuracy_score(y_test=y_test, y_pred=y_pred))
+        trained_models[indicator] = model
+
+        torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pkl')
+    return trained_models
+
 if __name__ == '__main__':
-    train_all_hmm(
+    train_all_transformer(
         tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
         )

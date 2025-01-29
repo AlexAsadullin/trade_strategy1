@@ -13,8 +13,7 @@ class VolatilityIndicatorsCalculator:
             std=std,
             talib=talib,
             offset=offset)], axis='columns')
-        print('bb')
-
+        
     def atr(self, length=14, scalar=1.0, offset=None):
         self.df["atr"] = ta.atr(
             high=self.df['High'],
@@ -24,8 +23,7 @@ class VolatilityIndicatorsCalculator:
             scalar=scalar,
             offset=offset
         )
-        print('atr')
-
+        
     def kc(self, length=20, scalar=1.5, offset=None):
         self.df = pd.concat([self.df, ta.kc(
             high=self.df['High'],
@@ -34,16 +32,14 @@ class VolatilityIndicatorsCalculator:
             length=length,
             scalar=scalar,
             offset=offset)], axis='columns')
-        print('kc')
-
+        
     def donchian(self, length=20, offset=None):
         self.df = pd.concat([self.df, pd.DataFrame(ta.donchian(
             high=self.df['High'],
             low=self.df['Low'],
             length=length,
             offset=offset))], axis=1)
-        print('donchain')
-
+        
     def accbands(self, length=20, scalar=1.0, offset=None):
         self.df = pd.concat([self.df,ta.accbands(
             close=self.df['Close'],
@@ -52,8 +48,7 @@ class VolatilityIndicatorsCalculator:
             length=length,
             scalar=scalar,
             offset=offset)], axis='columns')
-        print('acbands')
-
+        
     def rvi(self, length=14, scalar=100, offset=None):
         self.df["rvi"] = ta.rvi(
             close=self.df['Close'],
@@ -61,8 +56,7 @@ class VolatilityIndicatorsCalculator:
             scalar=scalar,
             offset=offset
         )
-        print('rvi')
-
+        
     def hwc(self, na=2, nb=3, nc=5, nd=1, scalar=1.0, channel_eval=None, offset=0):
         self.df["hwc"] = ta.hwc(
             close=self.df['Close'],
@@ -74,8 +68,7 @@ class VolatilityIndicatorsCalculator:
             channel_eval=channel_eval,
             offset=offset
         )
-        print('hwc')
-
+        
     def true_range(self, offset=None):
         self.df["true_range"] = ta.true_range(
             high=self.df['High'],
@@ -83,8 +76,7 @@ class VolatilityIndicatorsCalculator:
             close=self.df['Close'],
             offset=offset
         )
-        print('tr')
-
+        
     def massi(self, length=25, offset=None):
         self.df["massi"] = ta.massi(
             high=self.df['High'],
@@ -92,8 +84,7 @@ class VolatilityIndicatorsCalculator:
             length=length,
             offset=offset
         )
-        print('massi')
-
+        
     def natr(self, length=14, scalar=100, offset=None):
         self.df["natr"] = ta.natr(
             high=self.df['High'],
@@ -103,8 +94,7 @@ class VolatilityIndicatorsCalculator:
             scalar=scalar,
             offset=offset
         )
-        print('natr')
-
+        
 def main(df: pd.DataFrame, data_write_path: str=''):
     calculator = VolatilityIndicatorsCalculator(df=df)
     
@@ -121,5 +111,4 @@ def main(df: pd.DataFrame, data_write_path: str=''):
 
     if data_write_path != '':
         calculator.df.to_csv(data_write_path)
-    calculator.df.to_csv("volatility.csv")
     return calculator.df.dropna()

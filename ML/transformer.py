@@ -12,7 +12,7 @@ from data_manipulations import split_data, prepare_data_ratio
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, input_dim, d_model=64, nhead=4, num_layers=3, dim_feedforward=128, device='cpu', loss_function=nn.MSELoss()):
+    def __init__(self, input_dim, d_model=64, nhead=4, num_layers=5, dim_feedforward=256, device='cpu', loss_function=nn.MSELoss()):
         super().__init__()
         self.device = device
         self.loss_function = loss_function
@@ -42,7 +42,7 @@ class TransformerModel(nn.Module):
         return total_loss / len(train_loader)
 
 def main(data_read_path: str, model_save_path: str, train_part: float = 0.8):
-    num_epochs = 20
+    num_epochs = 30
     scaler = MinMaxScaler()
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     df = pd.read_csv(data_read_path, index_col=0)
@@ -61,7 +61,7 @@ def main(data_read_path: str, model_save_path: str, train_part: float = 0.8):
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     
     input_dim = X_train.shape[1]
-    model = TransformerModel(input_dim, device=device)
+    model = TransformerModel(input_dim, device=device, loss_function=nn.L1Loss())
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
     # train model

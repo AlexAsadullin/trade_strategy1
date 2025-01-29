@@ -104,6 +104,5 @@ def main(df:pd.DataFrame, data_write_path: str=''):
     #calculator.add_tsignals(trend_length=14, signal_length=5, offset=0)
     if data_write_path != '':
         calculator.df.to_csv(data_write_path)
-    calculator.df.to_csv('trend.csv')
     return calculator.df.dropna()
     
