@@ -11,3 +11,7 @@ bitscalperasad_token = ''
 
 bybit_api_key = ''
 bybit_api_secret = ''
+
+# for git push (on linux) - required if push directly in terminal
+# @MyUserName
+# xxx_acess1token1for1the1repository12345

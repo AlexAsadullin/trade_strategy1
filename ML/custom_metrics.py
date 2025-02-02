@@ -19,6 +19,6 @@ def wise_match_score(y_test, y_pred):
         y_pred = np.array(y_pred)
 
     condition = (y_test > 1) & (y_pred > 1) | (y_test < 1) & (y_pred < 1)
-    row_means = np.mean(condition.astype(int), axis=1)  # Среднее по строкам
+    row_means = np.mean(condition.astype(int))  # Среднее по строкам
 
     return row_means

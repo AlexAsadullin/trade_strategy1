@@ -9,6 +9,7 @@ import sys
 import os
 from hmmlearn.hmm import GaussianHMM
 from torch.utils.data import Dataset, DataLoader
+import plotly
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -19,7 +20,7 @@ from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
 from custom_datasets import TimeSeriesDataset
 from lstm_train import LSTM
 from transformer import TransformerModel
-from custom_metrics import directional_accuracy_score
+from custom_metrics import directional_accuracy_score, wise_match_score
 
 #indicators calsulator
 from strategies_testing_n_analytycs.indicators_calculator.momentum import main as momentum
@@ -35,14 +36,17 @@ def load_tinkoff(figi: str, days_back_begin: int, interval: CandleInterval, days
     df = get_by_timeframe_figi(figi=figi, days_back_begin=days_back_begin,
                                days_back_end=days_back_end, interval=interval,
                                 save_table=False)
-    df = df.drop(['Date'], axis='columns')
+    try: 
+        df = df.drop(['Date'], axis='columns')
+    except Exception as e: 
+        print(e)
     return df
 
 def process_data(df: pd.DataFrame, train_part: float, scaler):
     df = prepare_data_ratio(df=df, n_ratio=5, window_size=40)
     df=df.dropna()
     print('are there any nan?', df.isna().any().any())
-    print('all nans:', df.isna().sum().sum())
+    print('all nans count:', df.isna().sum().sum())
     frames = dict()
     frames['momentum'] = split_data(df=momentum(df), train_part=train_part, scaler=scaler)
     frames['overlap'] = split_data(df=overlap(df), train_part=train_part, scaler=scaler)
@@ -80,12 +84,14 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         model.eval()
         with torch.no_grad():
             X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-            predicted = model(X_test_tensor).detach().numpy()
+            y_pred = model(X_test_tensor).detach().numpy()
 
-        print(indicator, directional_accuracy_score(y_test=y_test, y_pred=predicted))
+        print(f'LSTM {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
         trained_models[indicator] = model
 
         torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pkl')
+    
+    # visual
     return trained_models
     
 def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
@@ -110,12 +116,11 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
                             n_iter=model_n_iter, random_state=model_random_state, tol=1e-4, verbose=True)
 
         model.fit(X_train)
-        print(indicator, 'is trained')
 
         y_pred_proba = model.predict_proba(X_test)[:, 1]
         y_pred = (y_pred_proba > 0.5).astype(int)
 
-        print(directional_accuracy_score(y_test=y_test, y_pred=y_pred))
+        print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
         trained_models[indicator] = model
 
         joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
@@ -157,13 +162,19 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
                 predictions.extend(y_pred)
                 actuals.extend(y_batch.numpy())
 
-        print(indicator, directional_accuracy_score(y_test=y_test, y_pred=y_pred))
-        trained_models[indicator] = model
+        print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
+        trained_models[indicator] = model #TODO: add settings dictionary
 
         torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pkl')
     return trained_models
 
 if __name__ == '__main__':
+    train_all_lstm(
+        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
+    )
+    train_all_hmm(
+        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
+    )
     train_all_transformer(
         tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
         )
