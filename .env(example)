@@ -8,6 +8,7 @@ tg_api_hash = ''
 phone = ''
 username = ''
 bitscalperasad_token = ''
+ansamble_invest_bot = ''
 
 bybit_api_key = ''
 bybit_api_secret = ''

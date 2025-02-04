@@ -8,7 +8,7 @@ from tinkoff.invest import CandleInterval
 import sys
 import os
 from hmmlearn.hmm import GaussianHMM
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import plotly
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -89,7 +89,7 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         print(f'LSTM {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
         trained_models[indicator] = model
 
-        torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pkl')
+        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
     
     # visual
     return trained_models
@@ -165,7 +165,7 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
         print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
         trained_models[indicator] = model #TODO: add settings dictionary
 
-        torch.save(model.state_dict(), rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pkl')
+        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')
     return trained_models
 
 if __name__ == '__main__':
