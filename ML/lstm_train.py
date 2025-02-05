@@ -133,7 +133,7 @@ def main(data_read_path:str, data_write_path:str, model_save_path:str, chart_pat
     difference = y_test - predicted
     print(difference, len(difference))
 
-    print('directional accuracy:', directional_accuracy_score(y_test=y_test, y_pred=predicted))
+    print('directional accuracy:', directional_accuracy_score(actuals=y_test, predictions=predicted))
 
     """fig = go.Figure()
     fig.add_trace(go.Scatter(x=list(range(len(difference))), y=difference, mode='markers', marker=dict(size=5, color='blue'), name='Difference'))

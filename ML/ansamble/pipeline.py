@@ -55,45 +55,6 @@ def process_data(df: pd.DataFrame, train_part: float, scaler):
     frames['pure'] = split_data(df=df.dropna(axis='index'), train_part=train_part, scaler=scaler)
     return frames
 
-def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
-                   model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=16, model_loss_function=nn.L1Loss(),
-                   training_num_epochs:int=30):
-    
-    df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
-    trained_models = dict()
-    ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
-
-    for indicator in ready_dataset.keys():
-        X_train, X_test, y_train, y_test = ready_dataset[indicator]
-
-        if np.isnan(X_train).any() or np.isnan(X_test).any() or np.isnan(y_train).any() or np.isnan(y_test).any():
-            print(f"NaN values detected in dataset '{indicator}'!")
-            continue
-        
-        train_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_train, y_train), batch_size=model_batch_size, shuffle=True)
-        test_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_test, y_test), batch_size=model_batch_size, shuffle=False)
-
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        model = LSTM(input_size=X_train.shape[1], hidden_size=model_hidden_size,
-                     num_stacked_layers=model_num_stacked_layers,
-                     device=device, loss_function=model_loss_function).to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-        for epoch in range(training_num_epochs):
-            avg_loss = model.train_validate_one_epoch(train_loader, optimizer, epoch)
-        model.eval()
-        with torch.no_grad():
-            X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-            y_pred = model(X_test_tensor).detach().numpy()
-
-        print(f'LSTM {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
-        trained_models[indicator] = model
-
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
-    
-    # visual
-    return trained_models
-    
 def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
                    model_n_components: int=3, model_covariance_type:str="full", model_n_iter:int=50,
                    model_random_state:int=42,
@@ -120,15 +81,59 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
         y_pred_proba = model.predict_proba(X_test)[:, 1]
         y_pred = (y_pred_proba > 0.5).astype(int)
 
-        print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
+        print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(actuals=y_test, predictions=y_pred)}\nWMS: {wise_match_score(actuals=y_test, predictions=y_pred)}')
         trained_models[indicator] = model
 
         joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
     return trained_models
 
+def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
+                   model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=32, model_loss_function=nn.L1Loss(),
+                   training_num_epochs:int=3):
+    
+    df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+    trained_models = dict()
+    ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
+
+    for indicator in ready_dataset.keys():
+        X_train, X_test, y_train, y_test = ready_dataset[indicator]
+
+        if np.isnan(X_train).any() or np.isnan(X_test).any() or np.isnan(y_train).any() or np.isnan(y_test).any():
+            print(f"NaN values detected in dataset '{indicator}'!")
+            continue
+        
+        train_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_train, y_train, window_size=30), batch_size=model_batch_size, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(TimeSeriesDataset(X_test, y_test, window_size=30), batch_size=model_batch_size, shuffle=False)
+
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        model = LSTM(input_size=X_train.shape[1], hidden_size=model_hidden_size,
+                     num_stacked_layers=model_num_stacked_layers,
+                     device=device, loss_function=model_loss_function).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+        for epoch in range(training_num_epochs):
+            avg_loss = model.train_validate_one_epoch(train_loader, optimizer, epoch)
+
+        model.eval()
+        actuals, predictions = [], []
+        with torch.no_grad():
+            for x_batch, y_batch in test_loader:
+                x_batch = x_batch.to(device)
+                y_pred = model(x_batch).cpu().numpy()
+                predictions.extend(y_pred.flatten())
+                actuals.extend(y_batch.numpy().flatten())
+
+        print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(actuals=actuals, predictions=predictions)}\nWMS: {wise_match_score(actuals=actuals, predictions=predictions)}')
+        trained_models[indicator] = model
+
+        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
+    
+    # visual
+    return trained_models
 
 def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
-                    model_loss_function=nn.L1Loss(), training_num_epochs:int=3):
+                    model_loss_function=nn.L1Loss(), model_batch_size=32,
+                    training_num_epochs:int=4,):
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
@@ -141,10 +146,8 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
             print(f"NaN values detected in dataset '{indicator}'!")
             continue
 
-        train_dataset = TimeSeriesDataset(X_train, y_train)
-        test_dataset = TimeSeriesDataset(X_test, y_test)
-        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+        train_loader = DataLoader(TimeSeriesDataset(X_train, y_train, window_size=30), batch_size=model_batch_size, shuffle=True)
+        test_loader = DataLoader(TimeSeriesDataset(X_test, y_test, window_size=30), batch_size=model_batch_size, shuffle=False)
     
         input_dim = X_train.shape[1]
         model = TransformerModel(input_dim, device=device, loss_function=model_loss_function)
@@ -159,10 +162,10 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
             for x_batch, y_batch in test_loader:
                 x_batch = x_batch.to(device)
                 y_pred = model(x_batch).cpu().numpy()
-                predictions.extend(y_pred)
-                actuals.extend(y_batch.numpy())
+                predictions.extend(y_pred.flatten())
+                actuals.extend(y_batch.numpy().flatten())
 
-        print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(y_test=y_test, y_pred=y_pred)}\nWMS: {wise_match_score(y_test=y_test, y_pred=y_pred)}')
+        print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(actuals=actuals, predictions=predictions)}\nWMS: {wise_match_score(actuals=actuals, predictions=predictions)}')
         trained_models[indicator] = model #TODO: add settings dictionary
 
         torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')

@@ -85,11 +85,18 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
 
         print(learn_algorythm, indicator_type)
         X_only, y_only = all_data[indicator_type]
+
+        ts_loader = DataLoader(TimeSeriesDataset(X_only, y_only, window_size=30), batch_size=32, shuffle=False)
         if learn_algorythm == 'LSTM':
             model.eval()
+            
+            actuals, predictions = [], []
             with torch.no_grad():
-                X_tensor = torch.tensor(X_only, dtype=torch.float32)
-                y_pred = model(X_tensor).detach().numpy()
+                for x_batch, y_batch in ts_loader:
+                    x_batch = x_batch.to(device)
+                    y_pred = model(x_batch).cpu().numpy()
+                    predictions.extend(y_pred)
+                    actuals.extend(y_batch.numpy())
         
         elif learn_algorythm == 'HMM':
             y_pred_proba = model.predict_proba(X_only)[:, 1]
@@ -97,9 +104,7 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
 
         elif learn_algorythm == 'Transformer':
             model.eval()
-            ts_dataset = TimeSeriesDataset(X_only, y_only)
-            ts_loader = DataLoader(ts_dataset, batch_size=32, shuffle=False)
-
+            
             actuals, predictions = [], []
             with torch.no_grad():
                 for x_batch, y_batch in ts_loader:
@@ -109,8 +114,12 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
                     actuals.extend(y_batch.numpy())
         else: 
             print('wrong model type, please check settings.json')
+        
+        predictions.append(y_pred)
 
-        print(y_pred)
+
+    final_votes = np.mean(predictions, axis=0) > 1
+    final_decision = np.where(final_votes, "Stock will grow", "Stock will fall")
 
 if __name__ == '__main__':
     ensemble_predict(df=get_by_timeframe_figi(figi='BBG004731032', days_back_begin=1000, interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, ticker='LKOH'),

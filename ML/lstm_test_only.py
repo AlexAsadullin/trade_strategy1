@@ -39,7 +39,7 @@ def test_lstm(data_read_path, model_read_path, chart_path):
     difference = y_test - predicted
     print(difference, len(difference))
 
-    print('directional accuracy:', directional_accuracy_score(y_test=y_test, y_pred=predicted))
+    print('directional accuracy:', directional_accuracy_score(actuals=y_test, predictions=predicted))
     # plot this
 
     # plot real vs predicted only on y_test

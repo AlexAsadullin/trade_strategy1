@@ -79,7 +79,7 @@ def main(data_read_path: str, model_save_path: str, train_part: float = 0.8):
             predictions.extend(y_pred)
             actuals.extend(y_batch.numpy())
 
-    print(directional_accuracy_score(y_test=np.array(actuals), y_pred=np.array(predictions)))
+    print(directional_accuracy_score(actuals=np.array(actuals), predictions=np.array(predictions)))
 
 if __name__ == "__main__":
     main("/home/alex/BitcoinScalper/data_collecting/tinkoff_data/prices_massive_LKOH_4_HOUR_2025-01-25.csv",

@@ -1,24 +1,24 @@
 import torch
 import numpy as np
 
-def directional_accuracy_score(y_test, y_pred):
-    if not isinstance(y_test, torch.Tensor):
-        y_test = torch.tensor(y_test, dtype=torch.float32)
-    if not isinstance(y_pred, torch.Tensor):
-        y_pred = torch.tensor(y_pred, dtype=torch.float32)
+def directional_accuracy_score(actuals, predictions):
+    if not isinstance(actuals, torch.Tensor):
+        actuals = torch.tensor(actuals, dtype=torch.float32)
+    if not isinstance(predictions, torch.Tensor):
+        predictions = torch.tensor(predictions, dtype=torch.float32)
 
-    sign_agreement = torch.sign(y_pred - 1) * torch.sign(y_test - 1)
-    confidence_weight = torch.abs(y_pred - 1)
+    sign_agreement = torch.sign(predictions - 1) * torch.sign(actuals - 1)
+    confidence_weight = torch.abs(predictions - 1)
     
     return torch.mean(sign_agreement * confidence_weight)
 
-def wise_match_score(y_test, y_pred):
-    if not isinstance(y_test, np.ndarray):
-        y_test = np.array(y_test)
-    if not isinstance(y_test, np.ndarray):
-        y_pred = np.array(y_pred)
+def wise_match_score(actuals, predictions):
+    if not isinstance(actuals, np.ndarray):
+        actuals = np.array(actuals)
+    if not isinstance(predictions, np.ndarray):
+        predictions = np.array(predictions)
 
-    condition = (y_test > 1) & (y_pred > 1) | (y_test < 1) & (y_pred < 1)
+    condition = (actuals > 1) & (predictions > 1) | (actuals < 1) & (predictions < 1)
     row_means = np.mean(condition.astype(int))  # Среднее по строкам
 
     return row_means
