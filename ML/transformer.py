@@ -23,7 +23,7 @@ class TransformerModel(nn.Module):
         self.to(device)
     
     def forward(self, x):
-        x = self.embedding(x).unsqueeze(1)  # Ensure (batch_size, 1, d_model)
+        x = self.embedding(x) #.unsqueeze(1)  # Ensure (batch_size, 1, d_model)
         x = self.transformer_encoder(x)
         return self.fc(x[:, -1, :]).squeeze()
     

@@ -118,7 +118,7 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         actuals, predictions = [], []
         with torch.no_grad():
             for x_batch, y_batch in test_loader:
-                x_batch = x_batch.to(device)
+                x_batch, y_batch = x_batch.to(device), y_batch.to(device)
                 y_pred = model(x_batch).cpu().numpy()
                 predictions.extend(y_pred.flatten())
                 actuals.extend(y_batch.numpy().flatten())
@@ -160,7 +160,7 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
         actuals, predictions = [], []
         with torch.no_grad():
             for x_batch, y_batch in test_loader:
-                x_batch = x_batch.to(device)
+                x_batch, y_batch = x_batch.to(device), y_batch.to(device)
                 y_pred = model(x_batch).cpu().numpy()
                 predictions.extend(y_pred.flatten())
                 actuals.extend(y_batch.numpy().flatten())
@@ -172,12 +172,14 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
     return trained_models
 
 if __name__ == '__main__':
+    train_all_transformer(
+        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
+        training_num_epochs=5
+        )
     train_all_lstm(
         tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
+        training_num_epochs=25
     )
     train_all_hmm(
         tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
     )
-    train_all_transformer(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
-        )
