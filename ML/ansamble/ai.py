@@ -78,7 +78,7 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
     all_data = process_prod_data(df=df, scaler=StandardScaler())
     print('data arrays prepared')
 
-    predicitons = []
+    ansamble_predicitons = []
     for key, value in models.items():
         learn_algorythm, indicator_type = key
         model = value
@@ -89,37 +89,38 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
         ts_loader = DataLoader(TimeSeriesDataset(X_only, y_only, window_size=30), batch_size=32, shuffle=False)
         if learn_algorythm == 'LSTM':
             model.eval()
-            
-            actuals, predictions = [], []
+            actual_data, predicted_data = [], []
             with torch.no_grad():
                 for x_batch, y_batch in ts_loader:
                     x_batch = x_batch.to(device)
                     y_pred = model(x_batch).cpu().numpy()
-                    predictions.extend(y_pred)
-                    actuals.extend(y_batch.numpy())
+                    predicted_data.extend(y_pred)
+                    actual_data.extend(y_batch.numpy())
+            ansamble_predicitons.append(list(predicted_data)[-1])
         
         elif learn_algorythm == 'HMM':
             y_pred_proba = model.predict_proba(X_only)[:, 1]
             y_pred = (y_pred_proba > 0.5).astype(int)
+            ansamble_predicitons.append(list(y_pred)[-1])
 
         elif learn_algorythm == 'Transformer':
             model.eval()
-            
-            actuals, predictions = [], []
+            actual_data, predicted_data = [], []
             with torch.no_grad():
                 for x_batch, y_batch in ts_loader:
                     x_batch = x_batch.to(device)
                     y_pred = model(x_batch).cpu().numpy()
-                    predictions.extend(y_pred)
-                    actuals.extend(y_batch.numpy())
+                    predicted_data.extend(y_pred)
+                    actual_data.extend(y_batch.numpy())
+            ansamble_predicitons.append(list(predicted_data)[-1])
         else: 
             print('wrong model type, please check settings.json')
-        
-        predictions.append(y_pred)
 
-
-    final_votes = np.mean(predictions, axis=0) > 1
+    # обратный scaler
+    final_votes = np.mean(np.array(predicted_data), axis=0) > 1
+    print(final_votes)
     final_decision = np.where(final_votes, "Stock will grow", "Stock will fall")
+    print(final_decision)
 
 if __name__ == '__main__':
     ensemble_predict(df=get_by_timeframe_figi(figi='BBG004731032', days_back_begin=1000, interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, ticker='LKOH'),

@@ -17,7 +17,7 @@ class TransformerModel(nn.Module):
         self.device = device
         self.loss_function = loss_function
         self.embedding = nn.Linear(input_dim, d_model)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=True) # batch_first=False
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.fc = nn.Linear(d_model, 1)
         self.to(device)
@@ -34,7 +34,8 @@ class TransformerModel(nn.Module):
             x_batch, y_batch = x_batch.to(self.device), y_batch.to(self.device)
             optimizer.zero_grad()
             output = self.forward(x_batch)
-            loss = self.loss_function(output, y_batch)
+            #output = output.view(-1, 1)
+            loss = self.loss_function(output, y_batch.squeeze())
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
