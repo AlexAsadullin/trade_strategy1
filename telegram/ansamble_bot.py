@@ -17,6 +17,7 @@ USER_DATA = {}
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from ML.ansamble.pipeline import load_tinkoff
+from ML.ansamble.ai import ensemble_predict
 
 def get_figi(name: str, instrument: str):
     df = pd.read_csv(r'/home/alex/BitcoinScalper/data_collecting/tinkoff_data/tickers_figi.csv')
@@ -215,6 +216,14 @@ def predict(message):
         bot.send_document(message.chat.id, f)
     os.remove(df_path)
     os.remove(fig_path)
+
+    bot.send_message(message.chat.id, 'начинаю рассчет...', reply_markup=markup)
+    predictions, final_desicion = ensemble_predict(
+        df=df,
+        models_dir_path='/home/alex/BitcoinScalper/ML/ansamble/trained_models'
+    )
+
+    bot.send_message(message.chat.id, f"финальное решение моделей: {final_desicion}\nголоса: {list(predictions)}", reply_markup=markup)
 
 bot.enable_save_next_step_handlers(delay=1)
 bot.load_next_step_handlers()

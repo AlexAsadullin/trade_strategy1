@@ -51,7 +51,7 @@ def process_prod_data(df: pd.DataFrame, scaler):
 
 def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalper/ML/ansamble/trained_models'):
     device = 'cpu'
-
+    scaler = StandardScaler()
     settings = {
         'LSTM': ['trend.pth', 'pure.pth'],
         'HMM': ['overlap.pkl'],
@@ -75,7 +75,7 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
 
     print('models loaded successfully')
 
-    all_data = process_prod_data(df=df, scaler=StandardScaler())
+    all_data = process_prod_data(df=df, scaler=scaler)
     print('data arrays prepared')
 
     ansamble_predicitons = []
@@ -96,12 +96,12 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
                     y_pred = model(x_batch).cpu().numpy()
                     predicted_data.extend(y_pred)
                     actual_data.extend(y_batch.numpy())
-            ansamble_predicitons.append(list(predicted_data)[-1])
+            ansamble_predicitons.append(float(list(predicted_data)[-1]))
         
         elif learn_algorythm == 'HMM':
             y_pred_proba = model.predict_proba(X_only)[:, 1]
             y_pred = (y_pred_proba > 0.5).astype(int)
-            ansamble_predicitons.append(list(y_pred)[-1])
+            ansamble_predicitons.append(float(list(y_pred)[-1]))
 
         elif learn_algorythm == 'Transformer':
             model.eval()
@@ -112,15 +112,19 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
                     y_pred = model(x_batch).cpu().numpy()
                     predicted_data.extend(y_pred)
                     actual_data.extend(y_batch.numpy())
-            ansamble_predicitons.append(list(predicted_data)[-1])
+            ansamble_predicitons.append(float(list(predicted_data)[-1]))
         else: 
             print('wrong model type, please check settings.json')
 
     # обратный scaler
-    final_votes = np.mean(np.array(predicted_data), axis=0) > 1
+    ansamble_predicitons = np.array(ansamble_predicitons, dtype=np.float32).reshape(-1, 1)
+    ansamble_predicitons = scaler.inverse_transform(ansamble_predicitons)
+    
+    final_votes = np.mean(np.array(ansamble_predicitons), axis=0) > 1
     print(final_votes)
     final_decision = np.where(final_votes, "Stock will grow", "Stock will fall")
     print(final_decision)
+    return ansamble_predicitons, final_decision
 
 if __name__ == '__main__':
     ensemble_predict(df=get_by_timeframe_figi(figi='BBG004731032', days_back_begin=1000, interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, ticker='LKOH'),
