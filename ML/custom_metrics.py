@@ -1,16 +1,33 @@
 import torch
 import numpy as np
 
-def directional_accuracy_score(actuals, predictions):
+def das_metric_solo(actuals, predictions):
     if not isinstance(actuals, torch.Tensor):
         actuals = torch.tensor(actuals, dtype=torch.float32)
     if not isinstance(predictions, torch.Tensor):
         predictions = torch.tensor(predictions, dtype=torch.float32)
 
-    """sign_agreement = torch.sign(predictions - 1) * torch.sign(actuals - 1)
+    sign_agreement = torch.sign(predictions - 1) * torch.sign(actuals - 1)
     confidence_weight = torch.abs(predictions - 1)
-    return torch.mean(sign_agreement * confidence_weight)"""
+    return torch.mean(sign_agreement * confidence_weight)
     
+def wms_metric_solo(actuals, predictions):
+    if not isinstance(actuals, np.ndarray):
+        actuals = np.array(actuals)
+    if not isinstance(predictions, np.ndarray):
+        predictions = np.array(predictions)
+    
+    condition = (actuals > 1) & (predictions > 1) | (actuals < 1) & (predictions < 1)
+    row_means = np.mean(condition.astype(int))  # Среднее по строкам
+
+    return row_means
+
+def das_metric_multi(actuals, predictions):
+    if not isinstance(actuals, torch.Tensor):
+        actuals = torch.tensor(actuals, dtype=torch.float32)
+    if not isinstance(predictions, torch.Tensor):
+        predictions = torch.tensor(predictions, dtype=torch.float32)
+  
     scores = []
     for i in range(actuals.shape[1]):  # Проходим по каждому столбцу
         sign_agreement = torch.sign(predictions[:, i] - 1) * torch.sign(actuals[:, i] - 1)
@@ -18,13 +35,17 @@ def directional_accuracy_score(actuals, predictions):
         scores.append(torch.mean(sign_agreement * confidence_weight).item())
 
     return np.mean(scores)
-
     
-def wise_match_score(actuals, predictions):
+def wms_metric_multi(actuals, predictions):
     if not isinstance(actuals, np.ndarray):
         actuals = np.array(actuals)
     if not isinstance(predictions, np.ndarray):
         predictions = np.array(predictions)
+    
+    """condition = (actuals > 1) & (predictions > 1) | (actuals < 1) & (predictions < 1)
+    row_means = np.mean(condition.astype(int))  # Среднее по строкам
+
+    return row_means"""
 
     scores = []
     for i in range(actuals.shape[1]):  # Проходим по каждому столбцу
@@ -33,7 +54,4 @@ def wise_match_score(actuals, predictions):
 
     return np.mean(scores)
 
-    """condition = (actuals > 1) & (predictions > 1) | (actuals < 1) & (predictions < 1)
-    row_means = np.mean(condition.astype(int))  # Среднее по строкам
-
-    return row_means"""
+    

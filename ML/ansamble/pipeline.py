@@ -19,7 +19,7 @@ from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
 from custom_datasets import TimeSeriesDataset
 from lstm_train import LSTM
 from transformer import TransformerModel
-from custom_metrics import directional_accuracy_score, wise_match_score
+from custom_metrics import das_metric_multi, wms_metric_multi
 
 #indicators calsulator
 from strategies_testing_n_analytycs.indicators_calculator.momentum import main as momentum
@@ -76,15 +76,33 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
                             n_iter=model_n_iter, random_state=model_random_state, tol=1e-4, verbose=True)
 
         model.fit(X_train)
+        # Копируем X_test, так как будем модифицировать его в процессе предсказаний
+        X_test_modified = X_test.copy()
+        y_pred_matrix = np.zeros_like(y_test)
 
-        y_pred_proba = model.predict_proba(X_test)[:, 1]
+        for i in range(y_train.shape[1]):  # Последовательно предсказываем y[i]
+            y_pred_proba = model.predict_proba(X_test_modified)
+            y_pred = (y_pred_proba[:, 1] > 0.5).astype(int)
+            
+            y_pred_matrix[:, i] = y_pred  # Записываем предсказание в матрицу
+
+            # Добавляем предсказанный y[i] в X_test для следующих итераций
+            X_test_modified = np.hstack((X_test_modified, y_pred.reshape(-1, 1)))
+
+        # Вычисляем средние метрики
+        mean_das = das_metric_multi(actuals=y_test, predictions=y_pred_matrix)
+        mean_wms = wms_metric_multi(actuals=y_test, predictions=y_pred_matrix)
+
+        print(f"HMM {indicator} - Mean DAS: {mean_das}")
+        print(f"HMM {indicator} - Mean WMS: {mean_wms}")
+
+        """y_pred_proba = model.predict_proba(X_test)[:, 1]
         #y_pred = (y_pred_proba > 0.5).astype(int)
 
         y_pred = (y_pred_proba[:, 1] > 0.5).astype(int) if y_train.shape[1] == 1 else (y_pred_proba > 0.5).astype(int)
-
         print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(actuals=y_test, predictions=y_pred)}\nWMS: {wise_match_score(actuals=y_test, predictions=y_pred)}')
+        """
         trained_models[indicator] = model
-
         joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
     return trained_models
 
@@ -124,7 +142,7 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
                 predictions.extend(y_pred.flatten())
                 actuals.extend(y_batch.numpy().flatten())
 
-        print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(actuals=actuals, predictions=predictions)}\nWMS: {wise_match_score(actuals=actuals, predictions=predictions)}')
+        print(f'Transformer {indicator} finished\nDAS: {das_metric_multi(actuals=actuals, predictions=predictions)}\nWMS: {wms_metric_multi(actuals=actuals, predictions=predictions)}')
         trained_models[indicator] = model
 
         torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
@@ -166,7 +184,7 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
                 predictions.extend(y_pred.flatten())
                 actuals.extend(y_batch.numpy().flatten())
 
-        print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(actuals=actuals, predictions=predictions)}\nWMS: {wise_match_score(actuals=actuals, predictions=predictions)}')
+        print(f'Transformer {indicator} finished\nDAS: {das_metric_multi(actuals=actuals, predictions=predictions)}\nWMS: {wms_metric_multi(actuals=actuals, predictions=predictions)}')
         trained_models[indicator] = model #TODO: add settings dictionary
 
         torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')
