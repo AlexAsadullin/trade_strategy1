@@ -42,7 +42,7 @@ def load_tinkoff(figi: str, days_back_begin: int, interval: CandleInterval, days
     return df
 
 def process_data(df: pd.DataFrame, train_part: float, scaler):
-    df = prepare_data_ratio(df=df, n_ratio=5, window_size=40)
+    df = prepare_data_ratio(df=df, n_prev_ratio=5, n_next_ratio=5, window_size=40)
     df=df.dropna()
     print('are there any nan?', df.isna().any().any())
     print('all nans count:', df.isna().sum().sum())
@@ -78,7 +78,9 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
         model.fit(X_train)
 
         y_pred_proba = model.predict_proba(X_test)[:, 1]
-        y_pred = (y_pred_proba > 0.5).astype(int)
+        #y_pred = (y_pred_proba > 0.5).astype(int)
+
+        y_pred = (y_pred_proba[:, 1] > 0.5).astype(int) if y_train.shape[1] == 1 else (y_pred_proba > 0.5).astype(int)
 
         print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(actuals=y_test, predictions=y_pred)}\nWMS: {wise_match_score(actuals=y_test, predictions=y_pred)}')
         trained_models[indicator] = model

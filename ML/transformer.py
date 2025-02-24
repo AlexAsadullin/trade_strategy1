@@ -51,7 +51,7 @@ def main(data_read_path: str, model_save_path: str, train_part: float = 0.8):
         df = df.drop('Time', axis='columns')
     except Exception as e: print(e)
 
-    df = prepare_data_ratio(df=df, n_ratio=10, window_size=40)
+    df = prepare_data_ratio(df=df, n_prev_ratio=10, window_size=40)
     X_train, X_test, y_train, y_test = split_data(df, train_part, scaler)
 
     # sequence_length = 20

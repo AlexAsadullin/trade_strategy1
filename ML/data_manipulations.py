@@ -6,8 +6,10 @@ import numpy as np
 # Optimized: Combined normalization and reshaping to reduce redundant calculations.
 def split_data(df: pd.DataFrame, train_part: float, scaler=None):
     train_size = int(len(df) * train_part)
-    X = df.drop('next_ratio', axis=1)  
-    y = df['next_ratio']
+
+    next_ratio_cols = [col for col in df.columns if "next_ratio" in col]
+    X = df.drop(next_ratio_cols, axis=1)  
+    y = df[next_ratio_cols]
 
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
@@ -27,19 +29,24 @@ def create_tensors(X_train, X_test, y_train, y_test):
         torch.tensor(y_test, dtype=torch.float32),
     )
 
-def _n_ratio(df, n):
+def _n_next_ratio(df, n):
+    for i in range(-1, -n-1):
+        df[f'{i}_next_ratio'] = df['Close'].shift(i-1) / df['Close'].shift(i)
+    return df
+
+def _n_prev_ratio(df, n):
     for i in range(1, n + 1):
         df[f'{i}_prev_ratio'] = df['Close'].shift(i) / df['Close'].shift(i + 1)
     return df
 
-def prepare_data_ratio(df: pd.DataFrame, data_write_path:str = '', n_ratio=7, window_size=30):
+def prepare_data_ratio(df: pd.DataFrame, data_write_path:str = '', n_prev_ratio=7, n_next_ratio=5, window_size=30):
     try:
         df = df.drop(['Date'], axis=1)
     except Exception as e:
         print(e)
 
-    df['next_ratio'] = df['Close'].shift(-1) / df['Close']
-    df = _n_ratio(df, n_ratio)
+    df = _n_next_ratio(df, n_next_ratio)
+    df = _n_prev_ratio(df, n_prev_ratio)
     df[f'{window_size}_prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=window_size).mean()
 
     df = df.dropna()

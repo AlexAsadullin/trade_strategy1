@@ -95,7 +95,7 @@ def main(data_read_path:str, data_write_path:str, model_save_path:str, chart_pat
     # Load and preprocess data
     data = pd.read_csv(data_read_path, index_col=0).drop('Time', axis=1)
     
-    df = prepare_data_ratio(data, data_write_path=data_write_path, n_ratio=7, window_size=30)
+    df = prepare_data_ratio(data, data_write_path=data_write_path, n_prev_ratio=7, window_size=30)
 
     X_train, X_test, y_train, y_test = split_data(df, 0.8)
     X_train, X_test, y_train, y_test = create_tensors(X_train.to_numpy(dtype=np.float32),
