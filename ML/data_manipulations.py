@@ -7,7 +7,7 @@ import numpy as np
 def split_data(df: pd.DataFrame, train_part: float, scaler=None):
     train_size = int(len(df) * train_part)
 
-    next_ratio_cols = [col for col in df.columns if "next_ratio" in col]
+    next_ratio_cols = [col for col in df.columns if "next_ratio" in col or "final_direction" in col]
     X = df.drop(next_ratio_cols, axis=1)  
     y = df[next_ratio_cols]
 
@@ -29,12 +29,12 @@ def create_tensors(X_train, X_test, y_train, y_test):
         torch.tensor(y_test, dtype=torch.float32),
     )
 
-def _n_next_ratio(df, n):
-    for i in range(-1, -n-1):
+def calculate_n_next_ratio(df, n):
+    for i in range(-1, (-1*n)-1, -1):
         df[f'{i}_next_ratio'] = df['Close'].shift(i-1) / df['Close'].shift(i)
     return df
 
-def _n_prev_ratio(df, n):
+def calculate_n_prev_ratio(df, n):
     for i in range(1, n + 1):
         df[f'{i}_prev_ratio'] = df['Close'].shift(i) / df['Close'].shift(i + 1)
     return df
@@ -45,11 +45,12 @@ def prepare_data_ratio(df: pd.DataFrame, data_write_path:str = '', n_prev_ratio=
     except Exception as e:
         print(e)
 
-    df = _n_next_ratio(df, n_next_ratio)
-    df = _n_prev_ratio(df, n_prev_ratio)
+    df = calculate_n_prev_ratio(df, n_prev_ratio)
+    df = calculate_n_next_ratio(df, n_next_ratio)
     df[f'{window_size}_prev_ratio_mean'] = df['1_prev_ratio'].rolling(window=window_size).mean()
+    #df['final_direction'] = 
 
-    df = df.dropna()
+    df = df.dropna(axis='rows')
     if data_write_path != '':
         df.to_csv(data_write_path)
 
