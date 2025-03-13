@@ -11,3 +11,5 @@ data_collecting/training_data/
 html_charts/
 ML/models/
 ML/ansamble/trained_models
+telegram/parser.py
+sessin_name.session

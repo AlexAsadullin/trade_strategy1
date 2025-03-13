@@ -49,7 +49,7 @@ def get_by_timeframe_figi(figi: str, days_back_begin: int, interval: CandleInter
         return df
 
 
-def get_all_figi():
+def get_all_figi(save_path: str):
     from tinkoff.invest import Client
     from tinkoff.invest.services import InstrumentsService, MarketDataService
     load_dotenv()
@@ -66,7 +66,7 @@ def get_all_figi():
                     'Name': item.name,
                 })
         df = pd.DataFrame(l)
-        df.to_csv(r'/home/alex/BitcoinScalper/data_collecting/tinkoff_data/tickers_figi.csv')
+        df.to_csv(save_path)
         print('data is saved')
         return df
 
@@ -126,7 +126,8 @@ def historical_data_analyze(data: list, ):
     print('data saved')"""
 
 if __name__ == '__main__':
-    load_dotenv()
+    """load_dotenv()
     interval = CandleInterval.CANDLE_INTERVAL_4_HOUR
     df = get_massive_by_timeframe_figi(step_back_days=10, figi='BBG004731032', ticker='LKOH', interval=interval,
-                                       start_interval_back=3680, end_iterval_back=17000, save_table=True)
+                                       start_interval_back=3680, end_iterval_back=17000, save_table=True)"""
+    get_all_figi(r"C:\trade_strategy1\all_figi.csv")
