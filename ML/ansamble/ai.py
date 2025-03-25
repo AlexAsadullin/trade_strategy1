@@ -14,8 +14,8 @@ import torch
 import pickletools
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 # 1 dir upper
-from custom_datasets import TimeSeriesDataset 
-from data_manipulations import prepare_data_ratio
+from ML.custom_datasets import TimeSeriesDataset
+from ML.data_manipulations import prepare_data_ratio
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 # 2 dirs upper
 from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
