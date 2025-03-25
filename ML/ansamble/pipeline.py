@@ -15,12 +15,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # import is used for 2 levels above
-from data_manipulations import prepare_data_ratio, split_data
 from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
-from custom_datasets import TimeSeriesDataset
-from lstm_train import LSTM
-from transformer import TransformerModel
-from custom_metrics import directional_accuracy_score, wise_match_score
+from ML.data_manipulations import prepare_data_ratio, split_data
+from ML.custom_datasets import TimeSeriesDataset
+from ML.lstm_train import LSTM
+from ML.transformer import TransformerModel
+from ML.custom_metrics import directional_accuracy_score, wise_match_score
 
 #indicators calsulator
 from strategies_testing_n_analytycs.indicators_calculator.momentum import main as momentum
@@ -55,10 +55,11 @@ def process_data(df: pd.DataFrame, train_part: float, scaler):
     frames['pure'] = split_data(df=df.dropna(axis='index'), train_part=train_part, scaler=scaler)
     return frames
 
-def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
-                   model_n_components: int=3, model_covariance_type:str="full", model_n_iter:int=50,
-                   model_random_state:int=42,
-                   ):
+def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+                  save_hmm_directory_path: str,
+                  model_n_components: int=3, model_covariance_type:str="full", model_n_iter:int=50,
+                  model_random_state:int=42,
+                  ):
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
@@ -84,10 +85,11 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
         print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(actuals=y_test, predictions=y_pred)}\nWMS: {wise_match_score(actuals=y_test, predictions=y_pred)}')
         trained_models[indicator] = model
 
-        joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
+        joblib.dump(model, rf'{save_hmm_directory_path}/{indicator}.pkl')
     return trained_models
 
-def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
+def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+                   save_lstm_directory_path: str,
                    model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=32, model_loss_function=nn.L1Loss(),
                    training_num_epochs:int=3):
     
@@ -126,12 +128,13 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(actuals=actuals, predictions=predictions)}\nWMS: {wise_match_score(actuals=actuals, predictions=predictions)}')
         trained_models[indicator] = model
 
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
+        torch.save(model, rf'{save_lstm_directory_path}/{indicator}.pth')
     
     # visual
     return trained_models
 
 def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+                          save_transformer_dir_path: str,
                     model_loss_function=nn.L1Loss(), model_batch_size=32,
                     training_num_epochs:int=4,):
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
@@ -168,18 +171,96 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
         print(f'Transformer {indicator} finished\nDAS: {directional_accuracy_score(actuals=actuals, predictions=predictions)}\nWMS: {wise_match_score(actuals=actuals, predictions=predictions)}')
         trained_models[indicator] = model #TODO: add settings dictionary
 
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')
+        torch.save(model, rf'{save_transformer_dir_path}/{indicator}.pth')
     return trained_models
 
+def train_different_tf():
+    model_settings = {
+        1: {
+            'transformer': {
+                'days': 4000,
+                'interval': CandleInterval.CANDLE_INTERVAL_2_HOUR,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/2_hour/transformer'
+            },
+            'lstm': {
+                'days': 4000,
+                'interval': CandleInterval.CANDLE_INTERVAL_2_HOUR,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/2_hour/lstm'
+            },
+            'hmm':{
+                'days': 4000,
+                'interval': CandleInterval.CANDLE_INTERVAL_2_HOUR,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/2_hour/hmm'
+            }
+        },
+        2: {
+            'transformer': {
+                'days': 200,
+                'interval': CandleInterval.CANDLE_INTERVAL_10_MIN,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/10_min/transformer'
+            },
+            'lstm': {
+                'days': 200,
+                'interval': CandleInterval.CANDLE_INTERVAL_10_MIN,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/10_min/lstm'
+            },
+            'hmm':{
+                'days': 200,
+                'interval': CandleInterval.CANDLE_INTERVAL_10_MIN,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/10_min/hmm'
+            }
+        },
+        3: {
+            'transformer': {
+                'days': 2000,
+                'interval': CandleInterval.CANDLE_INTERVAL_DAY,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/1_day/transformer'
+            },
+            'lstm': {
+                'days': 2000,
+                'interval': CandleInterval.CANDLE_INTERVAL_DAY,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/1_day/lstm'
+            },
+            'hmm':{
+                'days': 2000,
+                'interval': CandleInterval.CANDLE_INTERVAL_DAY,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/1_day/hmm'
+            },
+        },
+        4: {
+            'transformer': {
+                'days': 10000,
+                'interval': CandleInterval.CANDLE_INTERVAL_WEEK,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/1_week/transformer'
+            },
+            'lstm': {
+                'days': 10000,
+                'interval': CandleInterval.CANDLE_INTERVAL_WEEK,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/1_week/lstm'
+            },
+            'hmm':{
+                'days': 10000,
+                'interval': CandleInterval.CANDLE_INTERVAL_WEEK,
+                'save_path': r'/home/alex/BitcoinScalper/ML/ansamble/1_week/hmm'
+            },
+        }
+    }
+    for i, models in model_settings.items():
+        for model, settings in models.items():
+            if model == 'transformer':
+                train_all_transformer(
+                    tinkoff_days_back=settings['days'], tinkoff_figi='BBG004731032', tinkoff_interval=settings['interval'], 
+                    training_num_epochs=5, save_transformer_dir_path=settings['save_path']
+                    )
+            elif model == 'lstm':
+                train_all_lstm(
+                    tinkoff_days_back=settings['days'], tinkoff_figi='BBG004731032', tinkoff_interval=settings['interval'],
+                    training_num_epochs=25, save_lstm_directory_path=settings['save_path']
+                )
+            elif model == 'hmm':
+                train_all_hmm(
+                    tinkoff_days_back=settings['days'], tinkoff_figi='BBG004731032', tinkoff_interval=settings['interval'],
+                    save_hmm_directory_path=settings['save_path']
+                )
 if __name__ == '__main__':
-    train_all_transformer(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
-        training_num_epochs=5
-        )
-    train_all_lstm(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
-        training_num_epochs=25
-    )
-    train_all_hmm(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
-    )
+    train_different_tf()
