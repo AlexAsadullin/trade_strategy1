@@ -11,3 +11,7 @@ data_collecting/training_data/
 html_charts/
 ML/models/
 ML/ansamble/trained_models
+ML/ansamble/1_day
+ML/ansamble/1_week
+ML/ansamble/2_hour
+ML/ansamble/10_min
