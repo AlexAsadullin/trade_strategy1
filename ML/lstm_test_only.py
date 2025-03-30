@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 
-from custom_metrics import directional_accuracy_score
+from custom_metrics import das_metric_multi
 
 def test_lstm(data_read_path, model_read_path, chart_path):
     device = 'cpu'
@@ -39,7 +39,7 @@ def test_lstm(data_read_path, model_read_path, chart_path):
     difference = y_test - predicted
     print(difference, len(difference))
 
-    print('directional accuracy:', directional_accuracy_score(actuals=y_test, predictions=predicted))
+    print('directional accuracy:', das_metric_multi(actuals=y_test, predictions=predicted))
     # plot this
 
     # plot real vs predicted only on y_test

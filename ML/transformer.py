@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import Dataset, DataLoader
 
 from custom_datasets import TimeSeriesDataset
-from custom_metrics import directional_accuracy_score
+from custom_metrics import das_metric_multi
 from data_manipulations import split_data, prepare_data_ratio
 
 
@@ -51,7 +51,7 @@ def main(data_read_path: str, model_save_path: str, train_part: float = 0.8):
         df = df.drop('Time', axis='columns')
     except Exception as e: print(e)
 
-    df = prepare_data_ratio(df=df, n_ratio=10, window_size=40)
+    df = prepare_data_ratio(df=df, n_prev_ratio=10, window_size=40)
     X_train, X_test, y_train, y_test = split_data(df, train_part, scaler)
 
     # sequence_length = 20
@@ -80,7 +80,7 @@ def main(data_read_path: str, model_save_path: str, train_part: float = 0.8):
             predictions.extend(y_pred)
             actuals.extend(y_batch.numpy())
 
-    print(directional_accuracy_score(actuals=np.array(actuals), predictions=np.array(predictions)))
+    print(das_metric_multi(actuals=np.array(actuals), predictions=np.array(predictions)))
 
 if __name__ == "__main__":
     main("/home/alex/BitcoinScalper/data_collecting/tinkoff_data/prices_massive_LKOH_4_HOUR_2025-01-25.csv",

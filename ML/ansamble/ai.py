@@ -37,7 +37,7 @@ def split_prod_data(df:pd.DataFrame, scaler=None):
         return X.to_numpy(), y.to_numpy()
 
 def process_prod_data(df: pd.DataFrame, scaler):
-    df = prepare_data_ratio(df=df, n_ratio=5, window_size=40)
+    df = prepare_data_ratio(df=df, n_prev_ratio=5, window_size=40)
     df=df.dropna()
     print('are there any nan?', df.isna().any().any())
     print('all nans count:', df.isna().sum().sum())
