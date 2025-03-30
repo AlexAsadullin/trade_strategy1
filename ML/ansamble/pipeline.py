@@ -15,12 +15,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # import is used for 2 levels above
-from data_manipulations import prepare_data_ratio, split_data
+from ML.data_manipulations import prepare_data_ratio, split_data
 from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
-from custom_datasets import TimeSeriesDataset
-from lstm_train import LSTM
-from transformer import TransformerModel
-from custom_metrics import das_metric_multi, wms_metric_multi
+from ML.custom_datasets import TimeSeriesDataset
+from ML.lstm_train import LSTM
+from ML.transformer import TransformerModel
+from ML.custom_metrics import das_metric_multi, wms_metric_multi
 
 #indicators calsulator
 from strategies_testing_n_analytycs.indicators_calculator.momentum import main as momentum
