@@ -1,7 +1,8 @@
 import joblib
 import pandas as pd
 import numpy as np
-import torchimport torch.nn as nn
+import torch
+import torch.nn as nn
 from sklearn.preprocessing import StandardScaler
 from tinkoff.invest import CandleInterval
 import sys
@@ -169,32 +170,6 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
 
         torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')
     return trained_models
-
-def train_all_tframes(tframes: list):
-    for tf in tframes:
-        
-    
-def train_different_sectors(df, sector: str):
-    df_filtered = df[['Category'] == sector]
-
-    """
-    Banks
-    Retail
-    Tech
-    RE
-    Commd
-    Indus
-    Telec
-    Ener
-    Trans
-    Pharm
-    Cons
-    Metal
-    Chem
-    Mach
-    Agro
-    """
-
 
 if __name__ == '__main__':
     train_all_transformer(

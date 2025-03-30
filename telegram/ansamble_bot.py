@@ -109,9 +109,9 @@ def find_period(message):
         btn2 = types.KeyboardButton("/10MIN") 
         btn3 = types.KeyboardButton("/30MIN")
         btn4 = types.KeyboardButton("/1HOUR")
-        btn5 = types.KeyboardButton("/4HOUR")
+        btn5 = types.KeyboardButton("/2HOUR")
         btn6 = types.KeyboardButton("/1DAY")
-        btn7 = types.KeyboardButton("/1MONTH")
+        btn7 = types.KeyboardButton("/1WEEK")
         btn1 = types.KeyboardButton("/start")
         markup.add(btn2, btn3, btn4, btn5, btn6, btn7, btn1)
         
@@ -125,7 +125,7 @@ def find_period(message):
 @bot.message_handler(commands=['10MIN'])
 def ten_min(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn2 = types.KeyboardButton("/predict")
+    btn2 = types.KeyboardButton("/predict10min")
     btn1 = types.KeyboardButton("/start")
     global USER_DATA
     USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_10_MIN
@@ -135,7 +135,7 @@ def ten_min(message):
 @bot.message_handler(commands=['30MIN'])
 def thirty_min(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn2 = types.KeyboardButton("/predict")
+    btn2 = types.KeyboardButton("/predict30min")
     btn1 = types.KeyboardButton("/start")
     global USER_DATA
     USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_30_MIN
@@ -145,52 +145,84 @@ def thirty_min(message):
 @bot.message_handler(commands=['1HOUR'])
 def one_hour(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn2 = types.KeyboardButton("/predict")
+    btn2 = types.KeyboardButton("/predict1hour")
     btn1 = types.KeyboardButton("/start")
     global USER_DATA
     USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_HOUR
     markup.add(btn2, btn1)
     bot.send_message(message.chat.id, '/predict - получить предсказание модели\n/start - отмена', reply_markup=markup)
 
-@bot.message_handler(commands=['4HOUR'])
-def four_hour(message):
+@bot.message_handler(commands=['2HOUR'])
+def two_hour(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn2 = types.KeyboardButton("/predict")
+    btn2 = types.KeyboardButton("/predict2hour")
     btn1 = types.KeyboardButton("/start")
     global USER_DATA
-    USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_HOUR
+    USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_2_HOUR
     markup.add(btn2, btn1)
     bot.send_message(message.chat.id, '/predict - получить предсказание модели\n/start - отмена', reply_markup=markup)
 
 @bot.message_handler(commands=['1DAY'])
 def one_day(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn2 = types.KeyboardButton("/predict")
+    btn2 = types.KeyboardButton("/predict1day")
     btn1 = types.KeyboardButton("/start")
     global USER_DATA
     USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_DAY
     markup.add(btn2, btn1)
     bot.send_message(message.chat.id, '/predict - получить предсказание модели\n/start - отмена', reply_markup=markup)
 
-@bot.message_handler(commands=['1MONTH'])
-def one_month(message):
+@bot.message_handler(commands=['1WEEK'])
+def one_week(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn2 = types.KeyboardButton("/predict")
+    btn2 = types.KeyboardButton("/predict1week")
     btn1 = types.KeyboardButton("/start")
     global USER_DATA
-    USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_MONTH
+    USER_DATA['interval'] = CandleInterval.CANDLE_INTERVAL_WEEK
     markup.add(btn1, btn2)
     bot.send_message(message.chat.id, '/predict - получить предсказание модели\n/start - отмена', reply_markup=markup)
 
-@bot.message_handler(commands=['predict'])
-def predict(message):
+@bot.message_handler(commands=['predict10min'])
+def min_10(message):
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/10_min")
+
+@bot.message_handler(commands=['predict30min'])
+def min_30(message):
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/")
+
+@bot.message_handler(commands=['predict1hour'])
+def hour_1(message):
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/")
+
+@bot.message_handler(commands=['predict2hour'])
+def hour_2(message):
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/2_hour")
+
+@bot.message_handler(commands=['predict1day'])
+def day_1(message):
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/1_day")
+
+@bot.message_handler(commands=['predict1week'])
+def week_1(message):
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/1_week")
+
+
+def predict(models_dir_path):
     global USER_DATA
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("/start")
     markup.add(btn1)
-    bot.send_message(message.chat.id, 'минутку, скачиваю данные...', reply_markup=markup)
+    bot.send_message(USER_DATA['chat_id'], 'минутку, скачиваю данные...', reply_markup=markup)
     df = load_tinkoff(figi=USER_DATA['figi'], days_back_begin=USER_DATA['n_days'], interval=USER_DATA['interval'])
 
+    make_plots(df)
+    bot.send_message(USER_DATA['chat_id'], 'начинаю рассчет...', reply_markup=markup)
+    predictions, final_desicion = launch_ansamble(df, models_dir_path) # '/home/alex/BitcoinScalper/ML/ansamble/trained_models'
+    bot.send_message(USER_DATA['chat_id'], f"финальное решение моделей: {final_desicion}\nголоса: {list(predictions)}",
+                     reply_markup=markup)
+
+def make_plots(df: pd.DataFrame):
+    global USER_DATA
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Close"], mode='lines',
@@ -201,29 +233,26 @@ def predict(message):
     fig.update_layout(title=f"График цены {ins_type} \"{USER_DATA['company']}\" (Close)",
     xaxis_title=f"Дата (0 = {USER_DATA['n_days']} дней назад)", yaxis_title="Цена",
     legend_title="Обозначения")
-    
+
     df_path = rf'/home/alex/BitcoinScalper/telegram/temp/{USER_DATA['ticker']}_{USER_DATA['n_days']}_{USER_DATA['instrument_type']}_{USER_DATA['figi']}.csv'
     fig_path = rf'/home/alex/BitcoinScalper/telegram/temp/{USER_DATA['ticker']}_{USER_DATA['n_days']}_{USER_DATA['instrument_type']}_{USER_DATA['figi']}.html'
     df.to_csv(df_path)
     fig.write_html(fig_path)
 
-    USER_DATA = {
-        'chat_id': message.chat.id
-    }
     with open(df_path, 'rb') as f:
-        bot.send_document(message.chat.id, f)
+        bot.send_document(USER_DATA['chat_id'], f)
     with open(fig_path, 'rb') as f:
-        bot.send_document(message.chat.id, f)
+        bot.send_document(USER_DATA['chat_id'], f)
     os.remove(df_path)
     os.remove(fig_path)
 
-    bot.send_message(message.chat.id, 'начинаю рассчет...', reply_markup=markup)
+def launch_ansamble(df: pd.DataFrame, models_dir_path: str):
     predictions, final_desicion = ensemble_predict(
         df=df,
-        models_dir_path='/home/alex/BitcoinScalper/ML/ansamble/trained_models'
+        models_dir_path=models_dir_path
     )
+    return predictions, final_desicion
 
-    bot.send_message(message.chat.id, f"финальное решение моделей: {final_desicion}\nголоса: {list(predictions)}", reply_markup=markup)
 
 bot.enable_save_next_step_handlers(delay=1)
 bot.load_next_step_handlers()
