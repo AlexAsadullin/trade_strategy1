@@ -27,3 +27,4 @@ telebot
 fastapi
 uvicorn
 sqlalchemy
+passlib
