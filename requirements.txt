@@ -1,15 +1,26 @@
+# basic
 python-dotenv
 pandas
-pandas-ta
 numpy
+
+# graphics
 matplotlib
 plotly
+pandas-ta
+
+# stock data
 tinkoff
 tinkoff-investments
 yfinance
+
+# ML
 scikit-learn
 torch
 hmmlearn
 joblib
+
+# telegram
 #threading
 telebot
+fastapi
+uvicorn

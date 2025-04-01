@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from ML.data_manipulations import prepare_data_ratio, split_data
 from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
 from ML.custom_datasets import TimeSeriesDataset
-from ML.lstm_train import LSTM
+from ML.lstm import LSTM
 from ML.transformer import TransformerModel
 from ML.custom_metrics import das_metric_multi, wms_metric_multi
 
@@ -55,8 +55,6 @@ def process_data(df: pd.DataFrame, train_part: float, scaler):
     frames['pure'] = split_data(df=df.dropna(axis='index'), train_part=train_part, scaler=scaler)
     return frames
 
-import numpy as np
-
 def align_shapes(y_pred, y_test):
     """ Приводим y_pred и y_test к одинаковой форме """
     y_pred = np.array(y_pred)
@@ -77,7 +75,7 @@ def align_shapes(y_pred, y_test):
 
     return y_pred, y_test
 
-def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
+def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, save_path:str,
                    model_n_components: int=3, model_covariance_type:str="full", model_n_iter:int=50,
                    model_random_state:int=42,
                    ):
@@ -126,12 +124,13 @@ def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: C
         print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(actuals=y_test, predictions=y_pred)}\nWMS: {wise_match_score(actuals=y_test, predictions=y_pred)}')
         """
         trained_models[indicator] = model
-        joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
+        joblib.dump(model, os.path.join(save_path, f"{indicator}.pth"))
     return trained_models
 
-def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
+def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, save_path:str,
                    model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=32, model_loss_function=nn.L1Loss(),
-                   training_num_epochs:int=3):
+                   training_num_epochs:int=3,
+                   ):
     
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
@@ -189,14 +188,15 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
 
         trained_models[indicator] = model
 
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
+        torch.save(model, os.path.join(save_path, f"{indicator}.pth"))
     
     # visual
     return trained_models
 
-def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, save_path:str,
                     model_loss_function=nn.L1Loss(), model_batch_size=32,
-                    training_num_epochs:int=4,):
+                    training_num_epochs:int=4,
+                    ):
     df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
@@ -240,7 +240,7 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
 
         trained_models[indicator] = model  # TODO: add settings dictionary
 
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')
+        torch.save(model, os.path.join(save_path, f"{indicator}.pth"))
     return trained_models
 
 if __name__ == '__main__':
