@@ -22,5 +22,8 @@ joblib
 # telegram
 #threading
 telebot
+
+# web app
 fastapi
 uvicorn
+sqlalchemy
