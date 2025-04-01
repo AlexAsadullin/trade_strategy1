@@ -55,8 +55,6 @@ def process_data(df: pd.DataFrame, train_part: float, scaler):
     frames['pure'] = split_data(df=df.dropna(axis='index'), train_part=train_part, scaler=scaler)
     return frames
 
-import numpy as np
-
 def align_shapes(y_pred, y_test):
     """ Приводим y_pred и y_test к одинаковой форме """
     y_pred = np.array(y_pred)

@@ -1,6 +1,4 @@
 # libraries
-from fileinput import filename
-
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from tinkoff.invest import CandleInterval
@@ -9,6 +7,7 @@ from pathlib import Path
 from typing import Union
 import os
 import sys
+from fileinput import filename
 
 app = FastAPI()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

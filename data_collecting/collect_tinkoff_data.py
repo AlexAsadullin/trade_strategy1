@@ -13,7 +13,11 @@ def quote_to_float(data):
 
 def get_by_timeframe_figi(figi: str, days_back_begin: int, interval: CandleInterval, ticker: str='', 
                      days_back_end: int = 0, save_table: bool = True) -> pd.DataFrame:
-    TOKEN = os.getenv("TINKOFF_TOKEN_REAL")
+    load_dotenv()
+    #TOKEN = os.getenv("TINKOFF_TOKEN_REAL")
+    # TODO: пофиксить os.getenv
+    TOKEN = 't.6NdJIDwmrBcLNg3_xb0QlWAzVtTr71BoKF5MS4S0fISjFeeL8rVk4mzS7Nz1ujAd_3K6xNKs7sQjStHVQYKIWw'
+    print(TOKEN)
     from_timedelta = now() - timedelta(days=days_back_begin)
     to_timedelta = now() - timedelta(days=days_back_end)
     print('begin data loading')
@@ -45,7 +49,7 @@ def get_by_timeframe_figi(figi: str, days_back_begin: int, interval: CandleInter
         if save_table:
             interval_name = interval.name.replace("CANDLE_INTERVAL_", "")
             filename = f'''prices_{ticker}_{interval_name}_{str(from_timedelta)[:10]}.csv'''
-            df.to_csv(f"/home/alex/BitcoinScalper/data_collecting/tinkoff_data/{filename}")
+            df.to_csv(os.path.join('tinkoff_data', filename))
         return df
 
 
