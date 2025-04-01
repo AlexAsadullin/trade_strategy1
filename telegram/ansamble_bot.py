@@ -217,8 +217,8 @@ def predict(models_dir_path):
 
     make_plots(df)
     bot.send_message(USER_DATA['chat_id'], 'начинаю рассчет...', reply_markup=markup)
-    predictions, final_desicion = launch_ansamble(df, models_dir_path) # '/home/alex/BitcoinScalper/ML/ansamble/trained_models'
-    bot.send_message(USER_DATA['chat_id'], f"финальное решение моделей: {final_desicion}\nголоса: {list(predictions)}",
+    predictions, final_decision = launch_ansamble(df, models_dir_path) # '/home/alex/BitcoinScalper/ML/ansamble/trained_models'
+    bot.send_message(USER_DATA['chat_id'], f"финальное решение моделей: {final_decision}\nголоса: {list(predictions)}",
                      reply_markup=markup)
 
 def make_plots(df: pd.DataFrame):
@@ -247,11 +247,11 @@ def make_plots(df: pd.DataFrame):
     os.remove(fig_path)
 
 def launch_ansamble(df: pd.DataFrame, models_dir_path: str):
-    predictions, final_desicion = ensemble_predict(
+    predictions, final_decision = ensemble_predict(
         df=df,
         models_dir_path=models_dir_path
     )
-    return predictions, final_desicion
+    return predictions, final_decision
 
 
 bot.enable_save_next_step_handlers(delay=1)
