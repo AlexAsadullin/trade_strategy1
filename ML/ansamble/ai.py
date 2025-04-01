@@ -49,7 +49,7 @@ def process_prod_data(df: pd.DataFrame, scaler):
     frames['pure'] = split_prod_data(df=df.dropna(axis='index'), scaler=scaler)
     return frames
 
-def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalper/ML/ansamble/trained_models'):
+def ensemble_predict(df: pd.DataFrame, models_dir_path: str):
     device = 'cpu'
     scaler = StandardScaler()
     settings = {
@@ -62,16 +62,15 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path='/home/alex/BitcoinScalpe
     for learn_algorythm, models_pathes in settings.items():
         for model_path in models_pathes:
             # different types od 
-            with open(f'{models_dir_path}/{learn_algorythm}/{model_path}', "rb") as file:
-                print(f'{models_dir_path}/{learn_algorythm}/{model_path}')
+            with open(os.path.join(models_dir_path, learn_algorythm, model_path), "rb") as file:
                 if model_path.endswith('.pkl'):
                     indicator_type = model_path.replace('.pkl', '')
-                    models[(learn_algorythm, indicator_type)] = (joblib.load(file)) # pickle load doesn't read torch models
+                    models[(learn_algorythm, indicator_type)] = (joblib.load(file)) # pickle (joblib) load doesn't read torch models
                 elif model_path.endswith('.pth'):
                     indicator_type = model_path.replace('.pth', '')
                     models[(learn_algorythm, indicator_type)] = (torch.load(file)) # torch load doesn't read pickle models
                 else:
-                    print('wrong file in models directory')
+                    print('wrong file in models directory:', model_path)
 
     print('models loaded successfully')
 
