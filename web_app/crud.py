@@ -1,21 +1,26 @@
-# web_app/database.py
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+# web_app/crud.py
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from web_app.models import User
+from web_app.database import get_db
 
-DATABASE_URL = "postgresql://user:password@localhost/trading_db"
+# Инициализация для хеширования паролей
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
 
-# Функция для получения сессии БД
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Функция для получения пользователя по имени
+def get_user(db: Session, username: str):
+    return db.query(User).filter(User.username == username).first()
 
-def get_history():
-    pass
+
+# Функция для создания нового пользователя
+def create_user(db: Session, username: str, password: str):
+    # Хешируем пароль
+    hashed_password = pwd_context.hash(password)
+    new_user = User(username=username, hashed_password=hashed_password)
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
