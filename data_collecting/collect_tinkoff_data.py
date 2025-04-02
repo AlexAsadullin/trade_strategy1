@@ -14,10 +14,9 @@ def quote_to_float(data):
 def get_by_timeframe_figi(figi: str, days_back_begin: int, interval: CandleInterval, ticker: str='', 
                      days_back_end: int = 0, save_table: bool = True) -> pd.DataFrame:
     load_dotenv()
-    #TOKEN = os.getenv("TINKOFF_TOKEN_REAL")
-    # TODO: пофиксить os.getenv
-    TOKEN = 't.6NdJIDwmrBcLNg3_xb0QlWAzVtTr71BoKF5MS4S0fISjFeeL8rVk4mzS7Nz1ujAd_3K6xNKs7sQjStHVQYKIWw'
-    print(TOKEN)
+    TOKEN = os.getenv("TINKOFF_TOKEN_REAL")
+
+    print('token:', TOKEN)
     from_timedelta = now() - timedelta(days=days_back_begin)
     to_timedelta = now() - timedelta(days=days_back_end)
     print('begin data loading')
