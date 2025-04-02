@@ -7,6 +7,6 @@ from web_app.crud import get_history
 router = APIRouter(prefix="/history", tags=["History"])
 
 @router.get("/")
-def read_history(db: Session = Depends(get_db), skip: int = 0, limit:int = 10):
-    history = get_history(db, skip=skip, limit=limit)
+def read_history(user_id: str, db: Session = Depends(get_db), skip: int = 0, limit:int = 10):
+    history = get_history(db, user_id=user_id, skip=skip, limit=limit)
     return {"history": history}

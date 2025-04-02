@@ -13,27 +13,33 @@ app = FastAPI()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # project dependences
-from models import CANDLE_INTERVAL_MAP
+from api_models import CANDLE_INTERVAL_MAP
 from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
 from ML.ansamble.ai import ensemble_predict
 
-def load_tinkoff(figi: str, interval: CandleInterval, days_back_begin: int, days_back_end: int=0):
+
+def load_tinkoff(
+        figi: str, interval: CandleInterval, days_back_begin: int,
+        days_back_end: int = 0
+):
     df = get_by_timeframe_figi(figi=figi, days_back_begin=days_back_begin,
                                days_back_end=days_back_end, interval=interval,
-                                save_table=False)
+                               save_table=False)
     print('df loaded successfully')
     return df
+
 
 @app.get("/test")
 def test():
     print("Test endpoint called!")
     return {"message": "API работает!"}
 
+
 @app.get("/download/csv")
 def download_csv(
-    tinkoff_days_back: int = Query(..., description="Количество дней истории"),
-    tinkoff_figi: str = Query(..., description="FIGI бумаги"),
-    curr_interval: str = Query(..., description="Интервал (строка)")
+        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
+        tinkoff_figi: str = Query(..., description="FIGI бумаги"),
+        curr_interval: str = Query(..., description="Интервал (строка)")
 ):
     # Преобразуем строку в настоящий CandleInterval Tinkoff
     if isinstance(curr_interval, str):
@@ -52,11 +58,13 @@ def download_csv(
     df.to_csv(df_path)
     return FileResponse(df_path, filename=df_filename, media_type="text/csv")
 
+
 @app.get("/download/html")
-def download_html(tinkoff_days_back: int = Query(..., description="Количество дней истории"),
-                  tinkoff_figi: str = Query(..., description="FIGI бумаги"),
-                  curr_interval: str = Query(..., description="Интервал (строка)")
-                  ):
+def download_html(
+        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
+        tinkoff_figi: str = Query(..., description="FIGI бумаги"),
+        curr_interval: str = Query(..., description="Интервал (строка)")
+):
     # Преобразуем строку в настоящий CandleInterval Tinkoff
     if isinstance(curr_interval, str):
         if curr_interval in CANDLE_INTERVAL_MAP:
@@ -79,11 +87,13 @@ def download_html(tinkoff_days_back: int = Query(..., description="Количе�
     fig.write_html(fig_path)
     return FileResponse(fig_path, filename=fig_filename, media_type="text/html")
 
+
 @app.get("/predict")
-def predict_price(tinkoff_days_back: int = Query(..., description="Количество дней истории"),
-                  tinkoff_figi: str = Query(..., description="FIGI бумаги"),
-                  curr_interval: str = Query(..., description="Интервал (строка)"),
-                  ):
+def predict_price(
+        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
+        tinkoff_figi: str = Query(..., description="FIGI бумаги"),
+        curr_interval: str = Query(..., description="Интервал (строка)"),
+):
     # Преобразуем строку в настоящий CandleInterval Tinkoff
     if isinstance(curr_interval, str):
         if curr_interval in CANDLE_INTERVAL_MAP:
@@ -100,3 +110,9 @@ def predict_price(tinkoff_days_back: int = Query(..., description="Количе�
         models_dir_path=models_dir,
     )
     return {'predictions': predictions, 'final_decision': final_decision}
+
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("API.api_main:app", host="0.0.0.0", port=8000, reload=True)
