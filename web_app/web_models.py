@@ -1,7 +1,7 @@
-# web_app/api_models.py
 from sqlalchemy import Column, Integer, String, Float, DateTime
 from web_app.database import Base
 from datetime import datetime
+from pydantic import BaseModel
 
 class RequestHistory(Base):
     __tablename__ = "request_history"
@@ -24,3 +24,9 @@ class User(Base):
     b_day = Column(DateTime, default=datetime.now())
     country = Column(String, index=True)
     created_at = Column(DateTime, default=datetime.now())
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    birth_date: str
+    country: str
