@@ -29,9 +29,8 @@ def load_tinkoff(
     return df
 
 
-@app.get("/test")
+@app.get("/test_api")
 def test():
-    print("Test endpoint called!")
     return {"message": "API работает!"}
 
 
@@ -45,7 +44,6 @@ def download_csv(
     if isinstance(curr_interval, str):
         if curr_interval in CANDLE_INTERVAL_MAP:
             tinkoff_interval = CANDLE_INTERVAL_MAP[curr_interval]
-            print(tinkoff_interval)
         else:
             raise HTTPException(status_code=400, detail="Некорректный размер таймфрейма")
 
@@ -53,7 +51,6 @@ def download_csv(
 
     current_directory = Path(__file__).resolve().parent
     df_filename = f'days_{tinkoff_days_back}_figi_{tinkoff_figi}.csv'
-    print('data saved')
     df_path = os.path.join(current_directory, "temp", df_filename)
     df.to_csv(df_path)
     return FileResponse(df_path, filename=df_filename, media_type="text/csv")

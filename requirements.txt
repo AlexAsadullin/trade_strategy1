@@ -1,23 +1,23 @@
 # basic
-python-dotenv
-pandas
-numpy
+python-dotenv~=1.0.1
+pandas~=2.2.3
+numpy~=2.2.4
 
 # graphics
 matplotlib
-plotly
+plotly~=6.0.0
 pandas-ta
 
 # stock data
-tinkoff
+tinkoff~=0.1.1
 tinkoff-investments
 yfinance
 
 # ML
-scikit-learn
-torch
-hmmlearn
-joblib
+scikit-learn~=1.6.1
+torch~=2.6.0
+hmmlearn~=0.3.3
+joblib~=1.4.2
 
 # telegram
 #threading
@@ -31,3 +31,6 @@ passlib
 psycopg2
 python-multipart
 bcrypt
+pyTelegramBotAPI
+pandas_ta
+pydantic

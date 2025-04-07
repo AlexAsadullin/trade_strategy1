@@ -1,88 +1,168 @@
 # libraries
+import pandas as pd
 from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.security import OAuth2PasswordBearer # OAuth2PasswordRequestForm
+from passlib.context import CryptContext
 from pathlib import Path
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.annotation import Annotated
+from datetime import datetime
+from pathlib import Path
 import sys
 import os
+from pydantic import BaseModel
 
+
+current_directory = Path(__file__).resolve()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # project dependences
-from API.api_main import app as api_app, download_csv, download_html, predict_price # Импортируем API
-from web_app.routers import history, users
-from web_app.crud import get_db, get_user, create_user
-from web_app.web_models import UserCreate
+from API.api_main import app as api_app, download_csv, download_html, predict_price  # Импортируем API
+# from web_app.routers import history, users
+# from web_app.crud import get_user, create_user
+from web_app.database import engine, SessionLocal, get_db
+import web_app.web_models as models
 
 app = FastAPI(title="Trading Web App")
+models.Base.metadata.create_all(bind=engine)
+db_dependency = Annotated[Session, Depends(get_db)]
+
 # Включаем маршруты API в web-приложение
-app.mount("/api", api_app)  # Теперь API доступно по /api
-app.mount("/static",
-          StaticFiles(directory=os.path.join(Path(__file__).resolve().parent, "static")),
-          name="static")
+app.mount("/api", api_app)  # API/api_main доступно по host/api/ ...
+
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+app.mount("/static", StaticFiles(directory=frontend_path, html=True), name="static")
+
 templates = Jinja2Templates(directory=os.path.join(Path(__file__).resolve().parent, "templates"))
-# Подключаем роутеры
-app.include_router(users.router)
-app.include_router(history.router)
 # Авторизация
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# Хеширование паролей
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def get_figi_and_ticker(label: str):
+    """
+    input: FIGI или Тикер финансовго инструмента
+    output: tuple(Ticker, FIGI)
+    FIGI: 12 символов: латинские буквы и десятичные цифры - уникальный индентификатор ценной бумаги
+    Остальное расценивается как тикер (от 3-х до
+    """
+    project_root = current_directory.parents[-2]
+    all_figi_tickers_df = pd.read_csv(os.path.join(project_root, "all_figi_categ.csv"), index_col=0)
+    all_figi_tickers_df['Ticker'] = all_figi_tickers_df['Ticker'].astype(str)
+    all_figi_tickers_df['Figi'] = all_figi_tickers_df['Figi'].astype(str)
+
+    # Проверяем, является ли label тикером
+    ticker_match = all_figi_tickers_df[all_figi_tickers_df['Ticker'] == label]
+    if not ticker_match.empty:
+        row = ticker_match.iloc[0]
+        return row['Ticker'], row['Figi']
+
+    # Проверяем, является ли label FIGI
+    figi_match = all_figi_tickers_df[all_figi_tickers_df['Figi'] == label]
+    if not figi_match.empty:
+        row = figi_match.iloc[0]
+        return row['Ticker'], row['Figi']
+
+    raise ValueError(f"Label '{label}' не найден ни в колонке Ticker, ни в Figi.")
+
+
+class UserCreate(BaseModel):
+    #id: int
+    email: str
+    password: str
+    b_day: str
+    country: str
+    #created_at: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+def create_user(email: str, password: str, b_day: str, country: str, db: Session = Depends(get_db)) -> models.User:
+    hashed_password = pwd_context.hash(password)  # Хешируем пароль
+    hashed_password = pwd_context.hash(password)
+    try:
+        parsed_b_day = datetime.strptime(b_day, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid birth date format. Use YYYY-MM-DD.")
+    db_user = models.User(email=email, hashed_password=hashed_password, b_day=b_day, country=country)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def get_user(email: str, db: Session = Depends(get_db)) -> models.User | None:
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
+def get_history(user_id: str, limit: int, db: Session = Depends(get_db)):
+    return db.query(models.RequestHistory).filter(models.RequestHistory.user_id == user_id)[:limit]
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_react_app():
+    return FileResponse(os.path.join(frontend_path, "index.html"))
 
 @app.post("/register")
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    user_in_db = get_user(db, user.email)
+async def register(user: UserCreate, db: Session = Depends(get_db)):  # TODO:  реализовать input параметры user'a
+    user_in_db = get_user(db=db, email=user.email)
     if user_in_db:
         raise HTTPException(status_code=400, detail="User already exists")
-    create_user(db, user.email, user.password, user.birth_date, user.country)
-    return {"message": "User registered successfully"}
+    create_user(db=db, email=user.email, password=user.password, b_day=user.b_day, country=user.country)
+    # TODO: исколючение: юзер уже зарегистрирован
+    return {'message': 'created successfully'}
+    #return templates.TemplateResponse("register.html", {"request": request})
+
 
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = get_user(db, form_data.username)
-    if not user or user.hashed_password != form_data.password:  # Добавить хеширование
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-    return {"access_token": user.username, "token_type": "bearer"}
+async def login(user: UserLogin, db: Session = Depends(get_db)):
+    user_in_db = get_user(db=db, email=user.email)
+    if not user_in_db or not pwd_context.verify(user.password, user_in_db.hashed_password):
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+    return {'message': f'{user.email} logged in successfully'}
+
 
 @app.get("/test_web")
 def read_root():
-    return {"message": "Welcome to the Trading Web App"}
+    return {"message": "Trading Web App is working and availible"}
 
+"""
+# TODO: НЕСРОЧНО ВАЖНО - фронтенд добавить и подружить с бэкэндом
 @app.get("/", response_class=HTMLResponse)
 async def get_welcome_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/login", response_class=HTMLResponse)
-async def get_login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.get("/register", response_class=HTMLResponse)
-async def get_register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
 
 @app.get("/main", response_class=HTMLResponse)
 async def get_main_page(request: Request):
     return templates.TemplateResponse("main.html", {"request": request})
 
+
 @app.get("/download", response_class=HTMLResponse)
 async def get_download_page(request: Request):
+    # TODO: добавить сохранение в БД с историей запросов
     return templates.TemplateResponse("download.html", {"request": request})
+
 
 @app.get("/plot", response_class=HTMLResponse)
 async def get_plot_page(request: Request):
+    # TODO: добавить сохранение в БД с историей запросов
     return templates.TemplateResponse("download.html", {"request": request})
+
 
 @app.get("/ai", response_class=HTMLResponse)
 async def get_ai_page(request: Request):
+    # TODO: добавить сохранение в БД с историей запросов
     return templates.TemplateResponse("download.html", {"request": request})
-
+"""
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("web_app.web_main:app", host="0.0.0.0", port=8000, reload=True)
-
-
 
 """
 # Основной функционал
