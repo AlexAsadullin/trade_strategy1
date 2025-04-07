@@ -30,3 +30,4 @@ sqlalchemy
 passlib
 psycopg2
 python-multipart
+bcrypt
