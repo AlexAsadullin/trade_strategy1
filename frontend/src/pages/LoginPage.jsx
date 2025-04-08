@@ -25,6 +25,11 @@ const LoginPage = () => {
     }
   };
 
+  const clearForm = () => {
+    setEmail('');
+    setPassword('');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
       <form onSubmit={handleLogin} className="flex flex-col items-center space-y-4">
@@ -53,6 +58,16 @@ const LoginPage = () => {
             className="w-32 py-2 rounded bg-black hover:bg-gray-800"
           >
             Login
+          </button>
+          <button
+            onClick={() => {
+              clearForm();
+              navigate('/register');
+            }}
+            type="submit"
+            className="w-32 py-2 rounded bg-black hover:bg-gray-800"
+          >
+            I'm not a user yet
           </button>
         </div>
       </form>

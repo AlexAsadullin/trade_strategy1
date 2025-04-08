@@ -57,7 +57,6 @@ class UserLogin(BaseModel):
 
 
 def create_user(email: str, password: str, b_day: str, country: str, db: Session = Depends(get_db)) -> models.User:
-    hashed_password = pwd_context.hash(password)  # Хешируем пароль
     hashed_password = pwd_context.hash(password)
     try:
         parsed_b_day = datetime.strptime(b_day, "%Y-%m-%d")

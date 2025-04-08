@@ -56,6 +56,18 @@ const MainPage = () => {
       <img src="/logo" alt="Meteora Capital Logo" style={{ width: '150px', height: '150px' }} className="mb-6" />
       <h1 className="loggedInWelcomeText">Welcome! Logged in as: {email}</h1>
 
+      <div className="rightUpperAngleButton">
+          <button
+            onClick={() => {
+              localStorage.removeItem('email');
+              navigate('/');
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          >
+            Log Out
+          </button>
+      </div>
+
       <div className="w-full max-w-md space-y-4">
           <div className="centerInput">
             <input

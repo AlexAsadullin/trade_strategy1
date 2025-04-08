@@ -105,12 +105,21 @@ const RegisterPage = () => {
             </select>
         </div>
         <div className="loginButtons">
-            <button
-              type="submit"
-              className="w-32 py-2 rounded bg-black hover:bg-gray-800"
-            >
-              Register
-            </button>
+          <button
+            type="submit"
+            className="w-32 py-2 rounded bg-black hover:bg-gray-800"
+          >
+            Register
+          </button>
+          <button
+            onClick={() => {
+              navigate('/login');
+            }}
+            type="submit"
+            className="w-32 py-2 rounded bg-black hover:bg-gray-800"
+          >
+            I'm already a user
+          </button>
         </div>
       </form>
     </div>

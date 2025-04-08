@@ -21,7 +21,6 @@
   left: 0;
 }
 
-
 .loginButtons {
   display: flex;
   flex-direction: column;
@@ -43,6 +42,11 @@
   margin-bottom: 1rem;
 }
 
+.rightUpperAngleButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
 
 
 
