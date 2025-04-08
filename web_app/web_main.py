@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.security import OAuth2PasswordBearer # OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer  # OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -15,8 +15,7 @@ import sys
 import os
 from pydantic import BaseModel
 
-
-current_directory = Path(__file__).resolve()
+#current_directory = Path(__file__).resolve()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # project dependences
@@ -38,49 +37,24 @@ app.mount("/static", StaticFiles(directory=frontend_path, html=True), name="stat
 
 templates = Jinja2Templates(directory=os.path.join(Path(__file__).resolve().parent, "templates"))
 # Авторизация
-#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 # Хеширование паролей
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def get_figi_and_ticker(label: str):
-    """
-    input: FIGI или Тикер финансовго инструмента
-    output: tuple(Ticker, FIGI)
-    FIGI: 12 символов: латинские буквы и десятичные цифры - уникальный индентификатор ценной бумаги
-    Остальное расценивается как тикер (от 3-х до
-    """
-    project_root = current_directory.parents[-2]
-    all_figi_tickers_df = pd.read_csv(os.path.join(project_root, "all_figi_categ.csv"), index_col=0)
-    all_figi_tickers_df['Ticker'] = all_figi_tickers_df['Ticker'].astype(str)
-    all_figi_tickers_df['Figi'] = all_figi_tickers_df['Figi'].astype(str)
-
-    # Проверяем, является ли label тикером
-    ticker_match = all_figi_tickers_df[all_figi_tickers_df['Ticker'] == label]
-    if not ticker_match.empty:
-        row = ticker_match.iloc[0]
-        return row['Ticker'], row['Figi']
-
-    # Проверяем, является ли label FIGI
-    figi_match = all_figi_tickers_df[all_figi_tickers_df['Figi'] == label]
-    if not figi_match.empty:
-        row = figi_match.iloc[0]
-        return row['Ticker'], row['Figi']
-
-    raise ValueError(f"Label '{label}' не найден ни в колонке Ticker, ни в Figi.")
-
-
 class UserCreate(BaseModel):
-    #id: int
+    # id: int
     email: str
     password: str
     b_day: str
     country: str
-    #created_at: str
+    # created_at: str
+
 
 class UserLogin(BaseModel):
     email: str
     password: str
+
 
 def create_user(email: str, password: str, b_day: str, country: str, db: Session = Depends(get_db)) -> models.User:
     hashed_password = pwd_context.hash(password)  # Хешируем пароль
@@ -103,19 +77,19 @@ def get_user(email: str, db: Session = Depends(get_db)) -> models.User | None:
 def get_history(user_id: str, limit: int, db: Session = Depends(get_db)):
     return db.query(models.RequestHistory).filter(models.RequestHistory.user_id == user_id)[:limit]
 
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_react_app():
     return FileResponse(os.path.join(frontend_path, "index.html"))
 
+
 @app.post("/register")
-async def register(user: UserCreate, db: Session = Depends(get_db)):  # TODO:  реализовать input параметры user'a
+async def register(user: UserCreate, db: Session = Depends(get_db)):
     user_in_db = get_user(db=db, email=user.email)
     if user_in_db:
         raise HTTPException(status_code=400, detail="User already exists")
     create_user(db=db, email=user.email, password=user.password, b_day=user.b_day, country=user.country)
-    # TODO: исколючение: юзер уже зарегистрирован
     return {'message': 'created successfully'}
-    #return templates.TemplateResponse("register.html", {"request": request})
 
 
 @app.post("/login")
@@ -126,9 +100,16 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
     return {'message': f'{user.email} logged in successfully'}
 
 
+@app.get("/logo", response_class=FileResponse)
+async def get_logo():
+    logo_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "public", "vite.svg")
+    return FileResponse(logo_path)
+
+
 @app.get("/test_web")
 def read_root():
-    return {"message": "Trading Web App is working and availible"}
+    return {"message": "Trading Web App is working"}
+
 
 """
 # TODO: НЕСРОЧНО ВАЖНО - фронтенд добавить и подружить с бэкэндом
@@ -162,6 +143,7 @@ async def get_ai_page(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("web_app.web_main:app", host="0.0.0.0", port=8000, reload=True)
 
 """

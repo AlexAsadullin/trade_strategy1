@@ -1,14 +1,21 @@
 import React from 'react';
-import HomePage from './pages/HomePage';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import WelcomePage from './pages/WelcomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import MainPage from './pages/MainPage';
 
-export default function App() {
+const App = () => {
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200 text-slate-800 font-sans">
-        <header className="px-8 py-6 shadow-md bg-white"></header>
-        <HomePage />
-      </div>
-    </>
+    <Router>
+      <Routes>
+        <Route path="/" element={<WelcomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/main" element={<MainPage />} />
+      </Routes>
+    </Router>
   );
-}
+};
 
+export default App;

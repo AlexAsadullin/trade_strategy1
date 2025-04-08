@@ -70,7 +70,7 @@ def download_csv(
         else:
             raise HTTPException(status_code=400, detail="Некорректный размер таймфрейма")
 
-    ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker)
+    ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker.upper())
     df = load_tinkoff(figi=figi, days_back_begin=tinkoff_days_back, interval=tinkoff_interval)
 
     current_directory = Path(__file__).resolve().parent
@@ -92,7 +92,7 @@ def download_html(
             tinkoff_interval = CANDLE_INTERVAL_MAP[curr_interval]
         else:
             raise HTTPException(status_code=400, detail="Некорректный размер таймфрейма")
-    ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker)
+    ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker.upper())
     df = load_tinkoff(figi=figi, days_back_begin=tinkoff_days_back, interval=tinkoff_interval)
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -122,7 +122,7 @@ def predict_price(
         else:
             raise HTTPException(status_code=400, detail="Некорректный размер таймфрейма")
 
-    ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker)
+    ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker.upper())
     df = load_tinkoff(figi=figi, days_back_begin=tinkoff_days_back, interval=tinkoff_interval)
 
     project_root = Path(__file__).resolve().parents[1]
