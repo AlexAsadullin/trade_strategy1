@@ -17,39 +17,39 @@ const MainPage = () => {
     }
   }, [navigate]);
 
-  const baseURL = '/api';
-
   const handleDownload = async (endpoint) => {
-    try {
-      const params = new URLSearchParams({
-        tinkoff_days_back: daysBack,
-        tinkoff_figi_or_ticker: tickerOrFigi,
-        curr_interval: currInterval,
-      });
+      try {
+        const params = new URLSearchParams({
+          tinkoff_days_back: daysBack,
+          tinkoff_figi_or_ticker: tickerOrFigi,
+          curr_interval: currInterval,
+          user_email: email, // 💡 Вот тут была недостающая часть
+        });
 
-      const response = await fetch(`${baseURL}${endpoint}?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
+        const response = await fetch(`${endpoint}?${params}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
 
-      if (endpoint === '/predict') {
-        const data = await response.json();
-        alert(`AI Prediction: ${JSON.stringify(data.final_decision)}`);
-      } else {
-        const blob = await response.blob();
-        const filename = response.headers.get('content-disposition')?.split('filename=')[1] || 'downloaded_file';
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename.replaceAll('"', '');
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        if (endpoint === '/predict') {
+          const data = await response.json();
+          alert(`AI Prediction: ${JSON.stringify(data.final_decision)}`);
+        } else {
+          const blob = await response.blob();
+          const filename = response.headers.get('content-disposition')?.split('filename=')[1] || 'downloaded_file';
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename.replaceAll('"', '');
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
       }
-    } catch (error) {
-      alert('Error: ' + error.message);
-    }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white px-4">
@@ -63,8 +63,20 @@ const MainPage = () => {
               navigate('/');
             }}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
           >
             Log Out
+          </button>
+      </div>
+
+      <div className="leftUpperAngleButton">
+          <button
+            onClick={() => {
+              navigate('/userhistory');
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          >
+            History
           </button>
       </div>
 

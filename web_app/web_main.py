@@ -1,28 +1,26 @@
-# libraries
-import pandas as pd
+
 from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.security import OAuth2PasswordBearer  # OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pathlib import Path
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.annotation import Annotated
 from datetime import datetime
 from pathlib import Path
 import sys
 import os
-from pydantic import BaseModel
 
-#current_directory = Path(__file__).resolve()
+# current_directory = Path(__file__).resolve()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # project dependences
-from API.api_main import app as api_app, download_csv, download_html, predict_price  # Импортируем API
+from API.api_main import app as api_app, download_csv, download_html, predict_price, get_figi_and_ticker  # Импортируем API
 # from web_app.routers import history, users
 # from web_app.crud import get_user, create_user
-from web_app.database import engine, SessionLocal, get_db
+from web_app.database import engine, get_db
 import web_app.web_models as models
 
 app = FastAPI(title="Trading Web App")
@@ -42,19 +40,6 @@ templates = Jinja2Templates(directory=os.path.join(Path(__file__).resolve().pare
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-class UserCreate(BaseModel):
-    # id: int
-    email: str
-    password: str
-    b_day: str
-    country: str
-    # created_at: str
-
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
 
 def create_user(email: str, password: str, b_day: str, country: str, db: Session = Depends(get_db)) -> models.User:
     hashed_password = pwd_context.hash(password)
@@ -73,8 +58,22 @@ def get_user(email: str, db: Session = Depends(get_db)) -> models.User | None:
     return db.query(models.User).filter(models.User.email == email).first()
 
 
-def get_history(user_id: str, limit: int, db: Session = Depends(get_db)):
-    return db.query(models.RequestHistory).filter(models.RequestHistory.user_id == user_id)[:limit]
+def record_history(
+    user_id: int, ticker: str, figi: str, days_back: int, request_type: str,
+    db: Session = Depends(get_db),
+):
+    history = models.RequestHistory(
+        user_id=user_id,
+        ticker=ticker,
+        figi=figi,
+        days_back=days_back,
+        request_type=request_type,
+        created_at=datetime.now()
+    )
+    db.add(history)
+    db.commit()
+    db.refresh(history)
+    return history
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -83,7 +82,7 @@ async def serve_react_app():
 
 
 @app.post("/register")
-async def register(user: UserCreate, db: Session = Depends(get_db)):
+async def register(user: models.UserCreate, db: Session = Depends(get_db)):
     user_in_db = get_user(db=db, email=user.email)
     if user_in_db:
         raise HTTPException(status_code=400, detail="User already exists")
@@ -92,11 +91,105 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/login")
-async def login(user: UserLogin, db: Session = Depends(get_db)):
+async def login(user: models.UserLogin, db: Session = Depends(get_db)):
     user_in_db = get_user(db=db, email=user.email)
     if not user_in_db or not pwd_context.verify(user.password, user_in_db.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     return {'message': f'{user.email} logged in successfully'}
+
+
+@app.post("/userhistory")
+async def login(payload: models.EmailRequest,
+                db: Session = Depends(get_db)):
+    user = get_user(email=payload.email, db=db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    history_records = db.query(models.RequestHistory).filter(models.RequestHistory.user_id == user.id).order_by(desc(models.RequestHistory.created_at)).all()
+
+    return [
+        {
+            "ticker": r.ticker,
+            "figi": r.figi,
+            "days_back": r.days_back,
+            "request_type": r.request_type,
+            "created_at": r.created_at.isoformat()
+        }
+        for r in history_records
+    ]
+
+
+@app.get("/download/csv")
+def redirect_download_csv(
+        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
+        tinkoff_figi_or_ticker: str = Query(..., description="FIGI бумаги"),
+        curr_interval: str = Query(..., description="Интервал (строка)"),
+        user_email: str = Query(..., description="Должен быть зарегистрирован (строка)"),
+        db: Session = Depends(get_db),
+):
+    user = get_user(email=user_email, db=db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker)
+    except ValueError as e:
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+    record_history(db=db, user_id=user.id, ticker=ticker, figi=figi,
+        days_back=tinkoff_days_back, request_type="CSV")
+
+    return download_csv(tinkoff_days_back=tinkoff_days_back,
+                        tinkoff_figi_or_ticker=tinkoff_figi_or_ticker,
+                        curr_interval=curr_interval)
+
+
+@app.get("/download/html")
+def redirect_download_html(
+        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
+        tinkoff_figi_or_ticker: str = Query(..., description="FIGI бумаги"),
+        curr_interval: str = Query(..., description="Интервал (строка)"),
+        user_email: str = Query(..., description="Должен быть зарегистрирован (строка)"),
+        db: Session = Depends(get_db),
+):
+    user = get_user(email=user_email, db=db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    record_history(db=db, user_id=user.id, ticker=ticker, figi=figi,
+                   days_back=tinkoff_days_back, request_type="HTML")
+
+    return download_html(tinkoff_days_back=tinkoff_days_back,
+                         tinkoff_figi_or_ticker=tinkoff_figi_or_ticker,
+                         curr_interval=curr_interval)
+
+
+@app.get("/predict")
+def redirect_predict_price(
+        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
+        tinkoff_figi_or_ticker: str = Query(..., description="FIGI бумаги"),
+        curr_interval: str = Query(..., description="Интервал (строка)"),
+        user_email: str = Query(..., description="Должен быть зарегистрирован (строка)"),
+        db: Session = Depends(get_db),
+):
+    user = get_user(email=user_email, db=db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        ticker, figi = get_figi_and_ticker(tinkoff_figi_or_ticker)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    record_history(db=db, user_id=user.id, ticker=ticker, figi=figi,
+                   days_back=tinkoff_days_back, request_type="Predict")
+
+    return predict_price(tinkoff_days_back=tinkoff_days_back,
+                         tinkoff_figi_or_ticker=tinkoff_figi_or_ticker,
+                         curr_interval=curr_interval)
 
 
 @app.get("/logo", response_class=FileResponse)

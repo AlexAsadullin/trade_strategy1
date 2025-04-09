@@ -26,6 +26,7 @@ def get_figi_and_ticker(label: str):
     FIGI: 12 символов: латинские буквы и десятичные цифры - уникальный индентификатор ценной бумаги
     Остальное расценивается как тикер (от 3-х до
     """
+    label = label.upper()
     project_root = current_directory.parents[1]
     all_figi_tickers_df = pd.read_csv(os.path.join(project_root, "all_figi_categ.csv"), index_col=0)
     all_figi_tickers_df['Ticker'] = all_figi_tickers_df['Ticker'].astype(str)
@@ -35,13 +36,13 @@ def get_figi_and_ticker(label: str):
     ticker_match = all_figi_tickers_df[all_figi_tickers_df['Ticker'] == label]
     if not ticker_match.empty:
         row = ticker_match.iloc[0]
-        return row['Ticker'], row['Figi']
+        return row['Ticker'].upper(), row['Figi'].upper()
 
     # Проверяем, является ли label FIGI
     figi_match = all_figi_tickers_df[all_figi_tickers_df['Figi'] == label]
     if not figi_match.empty:
         row = figi_match.iloc[0]
-        return row['Ticker'], row['Figi']
+        return row['Ticker'].upper(), row['Figi'].upper()
 
     raise ValueError(f"Label '{label}' не найден ни в колонке Ticker, ни в Figi.")
 

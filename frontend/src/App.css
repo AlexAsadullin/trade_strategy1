@@ -48,6 +48,36 @@
   right: 1rem;
 }
 
+.leftUpperAngleButton {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+}
+
+.centerTable {
+  display: flex;
+  justify-content: center;
+  margin-top: 50px; /* Увеличен отступ сверху */
+  margin-bottom: 20px; /* Добавлен отступ снизу */
+}
+
+.centerTable table {
+  border-collapse: collapse; /* Убирает двойные границы между ячейками */
+  width: 77%; /* Ширина таблицы */
+}
+
+.centerTable th, .centerTable td {
+  border: 1px solid #ccc; /* Границы вокруг ячеек */
+  padding: 8px 12px; /* Отступы внутри ячеек */
+  text-align: center; /* Выравнивание текста по центру */
+}
+
+table th, table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+
 
 
 .logo {

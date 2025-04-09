@@ -28,12 +28,18 @@ class RequestHistory(Base):
     created_at = Column(DateTime, default=datetime.now())
 
 
-# Модель для создания пользователя
 class UserCreate(BaseModel):
     email: str
     password: str
     b_day: str
     country: str
+    # created_at: str
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
 
 # Модель для ответа (без пароля!)
 class UserResponse(BaseModel):
@@ -45,3 +51,7 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True  # нужно для SQLAlchemy
+
+
+class EmailRequest(BaseModel):
+    email: str
