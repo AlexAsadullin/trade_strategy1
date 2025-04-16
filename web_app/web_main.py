@@ -18,8 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # project dependences
 from API.api_main import app as api_app, download_csv, download_html, predict_price, get_figi_and_ticker  # Импортируем API
-# from web_app.routers import history, users
-# from web_app.crud import get_user, create_user
+from API.api_models import CANDLE_INTERVAL_MAP
 from web_app.database import engine, get_db
 import web_app.web_models as models
 
@@ -203,65 +202,20 @@ def read_root():
     return {"message": "Trading Web App is working"}
 
 
-"""
-# TODO: НЕСРОЧНО ВАЖНО - фронтенд добавить и подружить с бэкэндом
-@app.get("/", response_class=HTMLResponse)
-async def get_welcome_page(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+def create_models_dirs():
+    proj_root = os.path.join(Path(__file__).resolve().parents[1])
+    intervals = CANDLE_INTERVAL_MAP.keys()
+    directories = []
+    for i in intervals:
+        directories.append(os.path.join(proj_root, "ML", "ansamble", i, "LSTM"))
+        directories.append(os.path.join(proj_root, "ML", "ansamble", i, "HMM"))
+        directories.append(os.path.join(proj_root, "ML", "ansamble", i, "Transformer"))
+    for dir_name in directories:
+        os.makedirs(dir_name, exist_ok=True)
 
-
-@app.get("/main", response_class=HTMLResponse)
-async def get_main_page(request: Request):
-    return templates.TemplateResponse("main.html", {"request": request})
-
-
-@app.get("/download", response_class=HTMLResponse)
-async def get_download_page(request: Request):
-    # TODO: добавить сохранение в БД с историей запросов
-    return templates.TemplateResponse("download.html", {"request": request})
-
-
-@app.get("/plot", response_class=HTMLResponse)
-async def get_plot_page(request: Request):
-    # TODO: добавить сохранение в БД с историей запросов
-    return templates.TemplateResponse("download.html", {"request": request})
-
-
-@app.get("/ai", response_class=HTMLResponse)
-async def get_ai_page(request: Request):
-    # TODO: добавить сохранение в БД с историей запросов
-    return templates.TemplateResponse("download.html", {"request": request})
-"""
+    print("Директории успешно созданы (если не существовали ранее).")
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("web_app.web_main:app", host="0.0.0.0", port=8000, reload=True)
-
-"""
-# Основной функционал
-API_BASE_URL = "http://localhost:8000"
-
-@app.get("/get_table")
-def get_table(
-        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
-        tinkoff_figi: str = Query(..., description="FIGI бумаги"),
-        curr_interval: str = Query(..., description="Интервал (строка)")
-):
-    return download_csv(tinkoff_days_back, tinkoff_figi, curr_interval)
-
-@app.get("/get_chart")
-def get_chart(
-        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
-        tinkoff_figi: str = Query(..., description="FIGI бумаги"),
-        curr_interval: str = Query(..., description="Интервал (строка)")
-):
-    return download_html(tinkoff_days_back, tinkoff_figi, curr_interval)
-
-@app.get("/ai")
-def ai(
-        tinkoff_days_back: int = Query(..., description="Количество дней истории"),
-        tinkoff_figi: str = Query(..., description="FIGI бумаги"),
-        curr_interval: str = Query(..., description="Интервал (строка)"),
-):
-    return predict_price(tinkoff_days_back, tinkoff_figi, curr_interval)"""
+    create_models_dirs()
+    uvicorn.run("web_app.web_main:app", host="127.0.0.1", port=8000, reload=True)
