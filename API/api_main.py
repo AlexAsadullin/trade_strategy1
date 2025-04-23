@@ -127,14 +127,17 @@ def predict_price(
     df = load_tinkoff(figi=figi, days_back_begin=tinkoff_days_back, interval=tinkoff_interval)
 
     project_root = Path(__file__).resolve().parents[1]
-    current_timeframe = curr_interval
-    models_dir = os.path.join(project_root, 'ML', 'ansamble', current_timeframe)
+    print('project root:', project_root)
+    print('timeframe:', curr_interval)
+    models_dir = os.path.join(project_root, 'ML', 'ansamble', curr_interval)
     predictions, final_decision = ensemble_predict(
         df=df,
         models_dir_path=models_dir,
     )
-    return {'predictions': predictions, 'final_decision': final_decision}
-
+    return {
+        'predictions': ", ".join([str(pred) for pred in predictions.flatten()]),
+        'final_decision': str(final_decision[0])  # Преобразование первого элемента в строку
+    }
 
 @app.get("/test_api")
 def test():

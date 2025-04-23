@@ -1,6 +1,6 @@
 import telebot # для работы с ботом
 from telebot import types # для создания кнопок
-
+from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go 
 from collections import defaultdict
@@ -20,7 +20,8 @@ from ML.ansamble.pipeline import load_tinkoff
 from ML.ansamble.ai import ensemble_predict
 
 def get_figi(name: str, instrument: str):
-    df = pd.read_csv(r'/home/alex/BitcoinScalper/data_collecting/tinkoff_data/tickers_figi.csv')
+    project_root = Path(__file__).resolve().parents[1]
+    df = pd.read_csv(os.path.join(project_root, "all_figi_categ.csv"))
     if instrument == 'stocks':
         result = df.loc[(df['Type'] == 'shares') & (df['Name'].str.contains(name, case=False, na=False)), ['Name', 'Figi', 'Ticker']]
     elif instrument == 'bonds':
@@ -184,7 +185,7 @@ def one_week(message):
 
 @bot.message_handler(commands=['predict10min'])
 def min_10(message):
-    predict(r"/home/alex/BitcoinScalper/ML/ansamble/10_min")
+    predict(r"/home/alex/BitcoinScalper/ML/ansamble/10m")
 
 @bot.message_handler(commands=['predict30min'])
 def min_30(message):

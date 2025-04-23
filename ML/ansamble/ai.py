@@ -23,8 +23,21 @@ from strategies_testing_n_analytycs.indicators_calculator.momentum import main a
 from strategies_testing_n_analytycs.indicators_calculator.overlap import main as overlap
 from strategies_testing_n_analytycs.indicators_calculator.trend import main as trend
 from strategies_testing_n_analytycs.indicators_calculator.volatility import main as volatility
+from ML.ansamble.pipeline import process_data
 
 def split_prod_data(df:pd.DataFrame, scaler=None):
+    X = df.drop("next_ratio", axis=1)
+    y = df["next_ratio"]
+    if scaler:
+        X_scaled = scaler.fit_transform(X.to_numpy(dtype=np.float32))
+        y_reshaped = y.to_numpy(dtype=np.float32).reshape(-1, 1)
+
+        y_scaled = scaler.fit_transform(y_reshaped).ravel()
+
+        return X_scaled, y_scaled
+    else:
+        return X.to_numpy(), y.to_numpy()
+    """
     X = df.drop('next_ratio', axis=1)  
     y = df['next_ratio']
 
@@ -35,9 +48,12 @@ def split_prod_data(df:pd.DataFrame, scaler=None):
             )
     else:
         return X.to_numpy(), y.to_numpy()
+    """
+
+
 
 def process_prod_data(df: pd.DataFrame, scaler):
-    df = prepare_data_ratio(df=df, n_prev_ratio=5, window_size=40)
+    df = prepare_data_ratio(df=df, n_prev_ratio=8, n_next_ratio=1, window_size=40) # must match with ML.ansamble.pipeline.process_data
     df=df.dropna()
     print('are there any nan?', df.isna().any().any())
     print('all nans count:', df.isna().sum().sum())
@@ -54,7 +70,7 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path: str):
     scaler = StandardScaler()
     settings = {
         'LSTM': ['trend.pth', 'pure.pth'],
-        'HMM': ['overlap.pkl'],
+        #'HMM': ['overlap.pkl'],
         'Transformer': ['momentum.pth', 'volatility.pth']
     }
 
@@ -68,7 +84,7 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path: str):
                     models[(learn_algorythm, indicator_type)] = (joblib.load(file)) # pickle (joblib) load doesn't read torch models
                 elif model_path.endswith('.pth'):
                     indicator_type = model_path.replace('.pth', '')
-                    models[(learn_algorythm, indicator_type)] = (torch.load(file)) # torch load doesn't read pickle models
+                    models[(learn_algorythm, indicator_type)] = (torch.load(file, weights_only=False)) # torch load doesn't read pickle models
                 else:
                     print('wrong file in models directory:', model_path)
 
@@ -109,7 +125,7 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path: str):
                 for x_batch, y_batch in ts_loader:
                     x_batch = x_batch.to(device)
                     y_pred = model(x_batch).cpu().numpy()
-                    predicted_data.extend(y_pred)
+                    predicted_data.extend(np.atleast_1d(y_pred))
                     actual_data.extend(y_batch.numpy())
             ansamble_predicitons.append(float(list(predicted_data)[-1]))
         else: 
@@ -126,5 +142,8 @@ def ensemble_predict(df: pd.DataFrame, models_dir_path: str):
     return ansamble_predicitons, final_decision
 
 if __name__ == '__main__':
+    ensemble_predict(df=pd.read_csv(r"C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\train.csv", index_col=0),
+                     models_dir_path=r"C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\1H")
+    """
     ensemble_predict(df=get_by_timeframe_figi(figi='BBG004731032', days_back_begin=1000, interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, ticker='LKOH'),
-                     models_dir_path='/home/alex/BitcoinScalper/ML/ansamble/trained_models')
+                     models_dir_path='/home/alex/BitcoinScalper/ML/ansamble/trained_models')"""

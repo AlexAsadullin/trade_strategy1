@@ -16,7 +16,6 @@ def get_by_timeframe_figi(figi: str, days_back_begin: int, interval: CandleInter
     load_dotenv()
     TOKEN = os.getenv("TINKOFF_TOKEN_REAL")
 
-    print('token:', TOKEN)
     from_timedelta = now() - timedelta(days=days_back_begin)
     to_timedelta = now() - timedelta(days=days_back_end)
     print('begin data loading')

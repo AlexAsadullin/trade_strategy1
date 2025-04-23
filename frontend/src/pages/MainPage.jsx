@@ -33,7 +33,8 @@ const MainPage = () => {
 
         if (endpoint === '/predict') {
           const data = await response.json();
-          alert(`AI Prediction: ${JSON.stringify(data.final_decision)}`);
+          alert(`AI Prediction:\n\nFinal Decision: ${data.final_decision}\nPredictions: ${JSON.stringify(data.predictions)}`);
+
         } else {
           const blob = await response.blob();
           const filename = response.headers.get('content-disposition')?.split('filename=')[1] || 'downloaded_file';

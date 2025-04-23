@@ -20,31 +20,33 @@ from data_collecting.collect_tinkoff_data import get_by_timeframe_figi
 from ML.custom_datasets import TimeSeriesDataset
 from ML.lstm import LSTM
 from ML.transformer import TransformerModel
-from ML.custom_metrics import das_metric_multi, wms_metric_multi
+from ML.custom_metrics import das_metric_multi, wms_metric_multi, das_metric_solo, wms_metric_solo
 
-#indicators calsulator
+# indicators calsulator
 from strategies_testing_n_analytycs.indicators_calculator.momentum import main as momentum
 from strategies_testing_n_analytycs.indicators_calculator.overlap import main as overlap
 from strategies_testing_n_analytycs.indicators_calculator.trend import main as trend
 from strategies_testing_n_analytycs.indicators_calculator.volatility import main as volatility
-
+from ML.custom_metrics import DirectionalLoss, AsymmetricLoss, CombinedLoss
 
 def load_bybit():
     pass
 
-def load_tinkoff(figi: str, days_back_begin: int, interval: CandleInterval, days_back_end: int=0):
+
+def load_tinkoff(figi: str, days_back_begin: int, interval: CandleInterval, days_back_end: int = 0):
     df = get_by_timeframe_figi(figi=figi, days_back_begin=days_back_begin,
                                days_back_end=days_back_end, interval=interval,
-                                save_table=False)
-    try: 
+                               save_table=False)
+    try:
         df = df.drop(['Date'], axis='columns')
-    except Exception as e: 
+    except Exception as e:
         print(e)
     return df
 
+
 def process_data(df: pd.DataFrame, train_part: float, scaler):
-    df = prepare_data_ratio(df=df, n_prev_ratio=5, n_next_ratio=5, window_size=40)
-    df=df.dropna()
+    df = prepare_data_ratio(df=df, n_prev_ratio=8, n_next_ratio=1, window_size=40)
+    df = df.dropna()
     print('are there any nan?', df.isna().any().any())
     print('all nans count:', df.isna().sum().sum())
     frames = dict()
@@ -54,6 +56,7 @@ def process_data(df: pd.DataFrame, train_part: float, scaler):
     frames['volatility'] = split_data(df=volatility(df), train_part=train_part, scaler=scaler)
     frames['pure'] = split_data(df=df.dropna(axis='index'), train_part=train_part, scaler=scaler)
     return frames
+
 
 def align_shapes(y_pred, y_test):
     """ Приводим y_pred и y_test к одинаковой форме """
@@ -75,63 +78,52 @@ def align_shapes(y_pred, y_test):
 
     return y_pred, y_test
 
-def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
-                   model_n_components: int=3, model_covariance_type:str="full", model_n_iter:int=50,
-                   model_random_state:int=42,
-                   ):
-    df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+
+def train_all_hmm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+                  save_dir: str, model_n_components: int = 3, model_covariance_type: str = "full",
+                  model_n_iter: int = 50,
+                  model_random_state: int = 42,
+                  ):
+    #df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+    df = pd.read_csv(r"C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\train.csv", index_col=0)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
 
     for indicator in ready_dataset.keys():
         X_train, X_test, y_train, y_test = ready_dataset[indicator]
-
+        print(len(X_train), len(y_train), len(X_test), len(y_test))
         if X_train.shape[0] < model_n_components:
-            print(f"Skipping '{indicator}' - Not enough data for {model_n_components} components")
+            print(f"Skip, HMM '{indicator}' - Not enough data for {model_n_components} components")
             continue
         if np.isnan(X_train).any() or np.isnan(X_test).any() or np.isnan(y_train).any() or np.isnan(y_test).any():
-            print(f"NaN values detected in dataset '{indicator}'!")
+            print(f"Skip, NaN values detected in dataset '{indicator}'!")
             continue  # Skip this iteration to avoid training on NaN values
 
         model = GaussianHMM(n_components=model_n_components, covariance_type=model_covariance_type,
                             n_iter=model_n_iter, random_state=model_random_state, tol=1e-4, verbose=True)
-
         model.fit(X_train)
-        # Копируем X_test, так как будем модифицировать его в процессе предсказаний
-        X_test_modified = X_test.copy()
-        y_pred_matrix = np.zeros_like(y_test)
 
-        for i in range(y_train.shape[1]):  # Последовательно предсказываем y[i]
-            y_pred_proba = model.predict_proba(X_test_modified)
-            y_pred = (y_pred_proba[:, 1] > 0.5).astype(int)
-            
-            y_pred_matrix[:, i] = y_pred  # Записываем предсказание в матрицу
+        y_pred = model.predict(X_test)
+        print("Размер y_pred:", len(y_pred))
+        print("Размер y_test:", len(y_test))
 
-            # Добавляем предсказанный y[i] в X_test для следующих итераций
-            X_test_modified = np.hstack((X_test_modified, y_pred.reshape(-1, 1)))
-
-        # Вычисляем средние метрики
-        mean_das = das_metric_multi(actuals=y_test, predictions=y_pred_matrix)
-        mean_wms = wms_metric_multi(actuals=y_test, predictions=y_pred_matrix)
+        mean_das = das_metric_solo(actuals=y_test, predictions=y_pred)
+        mean_wms = wms_metric_solo(actuals=y_test, predictions=y_pred)
 
         print(f"HMM {indicator} - Mean DAS: {mean_das}")
         print(f"HMM {indicator} - Mean WMS: {mean_wms}")
 
-        """y_pred_proba = model.predict_proba(X_test)[:, 1]
-        #y_pred = (y_pred_proba > 0.5).astype(int)
-
-        y_pred = (y_pred_proba[:, 1] > 0.5).astype(int) if y_train.shape[1] == 1 else (y_pred_proba > 0.5).astype(int)
-        print(f'HMM {indicator} finished\nDAS: {directional_accuracy_score(actuals=y_test, predictions=y_pred)}\nWMS: {wise_match_score(actuals=y_test, predictions=y_pred)}')
-        """
         trained_models[indicator] = model
-        joblib.dump(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/HMM/{indicator}.pkl')
+        joblib.dump(model, os.path.join(save_dir, "HMM", f'{indicator}.pkl'))
     return trained_models
 
-def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval, 
-                   model_hidden_size: int=64, model_num_stacked_layers:int=5, model_batch_size:int=32, model_loss_function=nn.L1Loss(),
-                   training_num_epochs:int=3):
-    
-    df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+
+def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
+                   save_dir: str, model_hidden_size: int = 64, model_num_stacked_layers: int = 5,
+                   model_batch_size: int = 32,# model_loss_function=nn.L1Loss(),
+                   training_num_epochs: int = 3):
+    #df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+    df = pd.read_csv(r"C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\train.csv", index_col=0)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
 
@@ -150,9 +142,14 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         )
 
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        asym_loss = AsymmetricLoss(under_weight=1.5, over_weight=0.5)
+        dir_loss = DirectionalLoss(margin=1.0, bonus_weight=0.5)
+        combined_loss = CombinedLoss(loss_fn1=asym_loss, loss_fn2=dir_loss, alpha=0.6)
+
         model = LSTM(input_size=X_train.shape[1], hidden_size=model_hidden_size,
-                    num_stacked_layers=model_num_stacked_layers,
-                    device=device, loss_function=model_loss_function).to(device)
+                     num_stacked_layers=model_num_stacked_layers,
+                     device=device, loss_function=combined_loss).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
         # Обучение модели
@@ -162,40 +159,33 @@ def train_all_lstm(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: 
         # Инференс с последовательным добавлением предсказанных значений в X_test
         model.eval()
         actuals, predictions = [], []
-        X_test_modified = torch.tensor(X_test.copy(), dtype=torch.float32).to(device)
 
         with torch.no_grad():
-            for i in range(y_train.shape[1]):  # Итерируемся по колонкам y
-                y_pred = model(X_test_modified).cpu().numpy()
-                predictions.append(y_pred[:, i])  # Записываем предсказания для y[i]
-                actuals.append(y_test[:, i])  # Сохраняем реальные значения y[i]
+            for x_batch, y_batch in test_loader:
+                x_batch, y_batch = x_batch.to(device), y_batch.to(device)
+                y_pred = model(x_batch).cpu().numpy()
+                predictions.extend(y_pred.flatten())
+                actuals.extend(y_batch.numpy().flatten())
 
-                # Добавляем предсказанный y[i] в X_test
-                y_pred_col = torch.tensor(y_pred[:, i], dtype=torch.float32).view(-1, 1).to(device)
-                X_test_modified = torch.cat((X_test_modified, y_pred_col), dim=1)
-
-        # Преобразуем списки в numpy
-        actuals = np.array(actuals).T  # Транспонируем, чтобы вернуть исходный размер [samples, targets]
-        predictions = np.array(predictions).T
-
-        # Вычисляем средние метрики
         mean_das = das_metric_multi(actuals=actuals, predictions=predictions)
         mean_wms = wms_metric_multi(actuals=actuals, predictions=predictions)
 
-        print(f"Transformer {indicator} - Mean DAS: {mean_das}")
-        print(f"Transformer {indicator} - Mean WMS: {mean_wms}")
+        print(f"LSTM {indicator} {tinkoff_interval} - Mean DAS: {mean_das}")
+        print(f"LSTM {indicator} {tinkoff_interval}- Mean WMS: {mean_wms}")
 
         trained_models[indicator] = model
 
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/LSTM/{indicator}.pth')
-    
+        torch.save(model, os.path.join(save_dir, "LSTM", f'{indicator}.pth'))
+
     # visual
     return trained_models
 
+
 def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_interval: CandleInterval,
-                    model_loss_function=nn.L1Loss(), model_batch_size=32,
-                    training_num_epochs:int=4,):
-    df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+                          save_dir: str, #model_loss_function=nn.L1Loss(),
+                          model_batch_size=32, training_num_epochs: int = 4, ):
+    # df = load_tinkoff(days_back_begin=tinkoff_days_back, figi=tinkoff_figi, interval=tinkoff_interval)
+    df = pd.read_csv(r"C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\train.csv", index_col=0)
     trained_models = dict()
     ready_dataset = process_data(df=df, train_part=0.7, scaler=StandardScaler())
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -207,12 +197,18 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
             print(f"NaN values detected in dataset '{indicator}'!")
             continue
 
-        train_loader = DataLoader(TimeSeriesDataset(X_train, y_train, window_size=30), batch_size=model_batch_size, shuffle=True)
-        test_loader = DataLoader(TimeSeriesDataset(X_test, y_test, window_size=30), batch_size=model_batch_size, shuffle=False)
+        train_loader = DataLoader(TimeSeriesDataset(X_train, y_train, window_size=30), batch_size=model_batch_size,
+                                  shuffle=True)
+        test_loader = DataLoader(TimeSeriesDataset(X_test, y_test, window_size=30), batch_size=model_batch_size,
+                                 shuffle=False)
 
         input_dim = X_train.shape[1]
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        model = TransformerModel(input_dim, device=device, loss_function=model_loss_function).to(device)
+        asym_loss = AsymmetricLoss(under_weight=1.5, over_weight=0.5)
+        dir_loss = DirectionalLoss(margin=1.0, bonus_weight=0.5)
+        combined_loss = CombinedLoss(loss_fn1=asym_loss, loss_fn2=dir_loss, alpha=0.6)
+
+        model = TransformerModel(input_dim, device=device, loss_function=combined_loss).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
         # Обучение модели
@@ -233,18 +229,20 @@ def train_all_transformer(tinkoff_days_back: int, tinkoff_figi: str, tinkoff_int
         mean_das = das_metric_multi(actuals=actuals, predictions=predictions)
         mean_wms = wms_metric_multi(actuals=actuals, predictions=predictions)
 
-        print(f"Transformer {indicator} - Mean DAS: {mean_das}")
-        print(f"Transformer {indicator} - Mean WMS: {mean_wms}")
+        print(f"Transformer {indicator} {tinkoff_interval} - Mean DAS: {mean_das}")
+        print(f"Transformer {indicator} {tinkoff_interval} - Mean WMS: {mean_wms}")
 
         trained_models[indicator] = model  # TODO: add settings dictionary
 
-        torch.save(model, rf'/home/alex/BitcoinScalper/ML/ansamble/trained_models/Transformer/{indicator}.pth')
+        torch.save(model, os.path.join(save_dir, "Transformer", f'{indicator}.pth'))
     return trained_models
+
 
 def train_all_tframes(tframes: list):
     for tf in tframes:
         pass
-    
+
+
 def train_different_sectors(df, sector: str):
     df_filtered = df[['Category'] == sector]
 
@@ -269,13 +267,13 @@ def train_different_sectors(df, sector: str):
 
 if __name__ == '__main__':
     train_all_transformer(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR, 
-        training_num_epochs=5
-        )
+        tinkoff_days_back=2000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_15_MIN,
+        training_num_epochs=15, save_dir=r'C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\1H'
+    )
     train_all_lstm(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
-        training_num_epochs=25
+        tinkoff_days_back=2000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_15_MIN,
+        training_num_epochs=25, save_dir=r'C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\1H'
     )
     train_all_hmm(
-        tinkoff_days_back=1000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_2_HOUR,
-    )
+        tinkoff_days_back=2000, tinkoff_figi='BBG004731032', tinkoff_interval=CandleInterval.CANDLE_INTERVAL_15_MIN,
+        save_dir=r'C:\Users\asadu\PycharmProjects\trade_strategy1\ML\ansamble\1H')
